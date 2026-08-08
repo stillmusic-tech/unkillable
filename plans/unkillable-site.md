@@ -1,6 +1,6 @@
 # Plan: Unkillable — the site that lets you attack Bitcoin
 
-**PRD:** https://github.com/stillmusic-tech/unkillable/issues/1 (vault twin: `PRDs/Unkillable/Unkillable — Site PRD.md`)  ·  **Status:** not started
+**PRD:** https://github.com/stillmusic-tech/unkillable/issues/1 (vault twin: `PRDs/Unkillable/Unkillable — Site PRD.md`)  ·  **Status:** Phase 1 built and verified (2026-08-08) — engine + smoke tests green locally and in CI; awaiting the one-time Cloudflare Pages connect + custom domain to go live
 
 Canonical per-page behaviour lives in the vault's Unkillable Decision Register (27+ locked decisions) and eleven page-spec notes. If this plan and those notes disagree, the notes win.
 
