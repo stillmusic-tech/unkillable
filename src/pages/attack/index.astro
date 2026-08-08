@@ -1,0 +1,30 @@
+---
+import Base from '../../layouts/Base.astro'
+
+const weapons = [
+  { href: '/attack/hack', doubt: 'Just hack it', role: 'a hacker' },
+  { href: '/attack/shut-down', doubt: 'Shut down the server', role: 'a saboteur' },
+  { href: '/attack/51-percent', doubt: 'The 51% attack', role: 'a billionaire' },
+  { href: '/attack/ban', doubt: 'Ban it', role: 'a nation-state' },
+  { href: '/attack/print', doubt: 'Print more of it', role: 'an insider' },
+  { href: '/attack/time', doubt: "It'll die eventually", role: 'time itself' },
+  { href: '/attack/quantum', doubt: 'Quantum', role: 'the future' },
+]
+---
+
+<Base title="Attack the Network">
+  <h1>Attack the Network</h1>
+  <p>Seven famous ways to kill Bitcoin. Pick the one you already believe would work.</p>
+  <ul>
+    {
+      weapons.map((w) => (
+        <li>
+          <a href={w.href}>{w.doubt}</a> — you'd be {w.role}
+        </li>
+      ))
+    }
+  </ul>
+  <p class="stub">
+    The full armoury — weapon cards, live scars, FAILED stamps — arrives in Phase 6.
+  </p>
+</Base>

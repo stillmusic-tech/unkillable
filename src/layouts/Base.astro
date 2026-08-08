@@ -1,0 +1,114 @@
+---
+interface Props {
+  title: string
+}
+const { title } = Astro.props
+const nav = [
+  { href: '/', label: 'Home' },
+  { href: '/attack', label: 'Attack the Network' },
+  { href: '/fundamentals', label: 'Bitcoin Fundamentals' },
+  { href: '/about', label: 'About' },
+]
+const current = Astro.url.pathname
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Attack Bitcoin yourself and watch what actually happens." />
+    <title>{title} · Unkillable</title>
+  </head>
+  <body>
+    <nav>
+      {
+        nav.map((item) => (
+          <a
+            href={item.href}
+            aria-current={
+              current === item.href || (item.href !== '/' && current.startsWith(item.href))
+                ? 'page'
+                : undefined
+            }
+          >
+            {item.label}
+          </a>
+        ))
+      }
+    </nav>
+    <main>
+      <slot />
+    </main>
+  </body>
+</html>
+
+<style is:global>
+  :root {
+    --bg: #07090d;
+    --panel: #10141b;
+    --text: #e8e6e1;
+    --dim: #8b8f98;
+    --orange: #f7931a;
+  }
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--text);
+    font-family:
+      system-ui,
+      -apple-system,
+      sans-serif;
+    line-height: 1.5;
+  }
+  nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #1c212b;
+  }
+  nav a {
+    color: var(--dim);
+    text-decoration: none;
+    font-size: 0.95rem;
+    letter-spacing: 0.02em;
+  }
+  nav a:hover,
+  nav a[aria-current='page'] {
+    color: var(--text);
+  }
+  main {
+    max-width: 60rem;
+    margin: 0 auto;
+    padding: 2.5rem 1.5rem 4rem;
+  }
+  h1 {
+    font-size: 2rem;
+    letter-spacing: 0.01em;
+  }
+  a {
+    color: var(--orange);
+  }
+  .stub {
+    color: var(--dim);
+    border: 1px dashed #2a3140;
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+    margin-top: 1.5rem;
+  }
+  .cta {
+    display: inline-block;
+    background: var(--orange);
+    color: #0a0a0a;
+    font-weight: 700;
+    font-size: 1.15rem;
+    padding: 0.9rem 2rem;
+    border-radius: 8px;
+    text-decoration: none;
+  }
+</style>

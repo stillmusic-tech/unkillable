@@ -1,0 +1,21 @@
+{
+  "source": "stub — 3 entries for the Phase 1 tracer bullet; the real rich-address snapshot lands in Phase 2",
+  "retrieved": "2026-08-08",
+  "entries": [
+    {
+      "address": "34xp4vRoCGJym3xR7yCVPFHoCNxv4Twseo",
+      "label": "Binance cold wallet",
+      "btc": 248597
+    },
+    {
+      "address": "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
+      "label": "The genesis address (Satoshi's first)",
+      "btc": 100
+    },
+    {
+      "address": "1FeexV6bAHb8ybZjqQMjJrcCrHGW9sb6uF",
+      "label": "Dormant whale, untouched since 2011",
+      "btc": 79957
+    }
+  ]
+}

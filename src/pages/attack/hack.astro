@@ -1,0 +1,94 @@
+---
+import Base from '../../layouts/Base.astro'
+---
+
+<Base title="Just hack it">
+  <h1>Just hack it</h1>
+  <p>
+    Every Bitcoin vault is locked by a key: a number picked by 256 coin flips. Flip the
+    coins, mint a real key, and see if it opens anyone's vault.
+  </p>
+
+  <button id="flip">FLIP 256 COINS</button>
+
+  <section id="result" hidden>
+    <p><span class="label">Your key (a real Bitcoin private key):</span></p>
+    <p id="key" class="mono"></p>
+    <p><span class="label">The vault address it unlocks:</span></p>
+    <p id="address" class="mono"></p>
+    <p id="verdict"></p>
+  </section>
+
+  <p class="stub">
+    Phase 1 tracer: the check runs against a 3-address stub of the rich list. The full
+    experience — escalating key-crackers, honest timescales, the passphrase footnote —
+    arrives in Phase 2.
+  </p>
+</Base>
+
+<script>
+  import {
+    checkAgainstSnapshot,
+    flipsToPrivateKey,
+    keyToHex,
+    privateKeyToAddress,
+    randomFlips,
+    type RichSnapshot,
+  } from '../../engines/hack/engine'
+  import snapshotJson from '../../data/rich-snapshot.stub.json'
+
+  const snapshot = snapshotJson as RichSnapshot
+  const button = document.getElementById('flip') as HTMLButtonElement
+  const result = document.getElementById('result') as HTMLElement
+  const keyEl = document.getElementById('key') as HTMLElement
+  const addressEl = document.getElementById('address') as HTMLElement
+  const verdictEl = document.getElementById('verdict') as HTMLElement
+
+  button.addEventListener('click', () => {
+    let key: Uint8Array | null = null
+    while (key === null) {
+      try {
+        key = flipsToPrivateKey(randomFlips())
+      } catch {
+        // astronomically rare out-of-range flip result — flip again
+      }
+    }
+    const address = privateKeyToAddress(key)
+    const match = checkAgainstSnapshot(address, snapshot)
+    keyEl.textContent = keyToHex(key)
+    addressEl.textContent = address
+    verdictEl.textContent = match
+      ? `MATCH — this key opens "${match.label}" (${match.btc.toLocaleString()} BTC). You just robbed it.`
+      : `Checked against the rich list (${snapshot.entries.length}-address stub): NO MATCH. Nothing to steal. Flip again — the odds don't care.`
+    result.hidden = false
+  })
+</script>
+
+<style>
+  #flip {
+    background: var(--orange);
+    color: #0a0a0a;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    padding: 0.9rem 2rem;
+    cursor: pointer;
+  }
+  .label {
+    color: var(--dim);
+    font-size: 0.9rem;
+  }
+  .mono {
+    font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+    font-size: 0.85rem;
+    word-break: break-all;
+    background: var(--panel);
+    padding: 0.6rem 0.8rem;
+    border-radius: 6px;
+  }
+  #verdict {
+    margin-top: 1rem;
+    font-weight: 600;
+  }
+</style>

@@ -13,7 +13,7 @@ Canonical per-page behaviour lives in the vault's Unkillable Decision Register (
 | Schema       | No database. Per-visitor progress (FAILED stamps, report card) is one small versioned record in the browser's local storage.                     |
 | Service boundaries | Per-attack **engine** (pure TypeScript brains, no visuals — the tested surface) · one shared **data tap** (live mempool.space / Bitnodes → bundled snapshot fallback, always exposing mode + data date; pages never call live sources directly) · one shared **globe** component (observatory + Attack 2) · **fundamentals overlay** openable mid-attack. |
 | Testing      | Vitest for engines + data tap; Playwright for deliberately shallow page smoke tests. Look/feel is human-judged, never automated.                 |
-| Dependencies | astro, typescript, globe.gl (3D earth rendering), vitest, playwright. Nothing else without a plan amendment.                                     |
+| Dependencies | astro, typescript, globe.gl (3D earth rendering), vitest, playwright, plus the audited minimal-crypto trio @noble/secp256k1 + @noble/hashes + @scure/base (real Bitcoin key→address derivation; amendment recorded Phase 1). Nothing else without a plan amendment. |
 | Hosting      | Cloudflare Pages, custom domain `unkillable.bitcoin-fix.com` (bitcoin-fix.com DNS already on Cloudflare — one CNAME record).                     |
 
 ## Phases
