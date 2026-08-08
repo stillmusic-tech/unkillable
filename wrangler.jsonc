@@ -1,0 +1,8 @@
+// Cloudflare deploy config: static site, no server code — serve the built dist/ folder.
+{
+  "name": "unkillable",
+  "compatibility_date": "2026-07-01",
+  "assets": {
+    "directory": "./dist"
+  }
+}
