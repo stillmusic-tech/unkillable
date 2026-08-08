@@ -15,4 +15,4 @@ Attack Bitcoin yourself and watch what actually happens. Live at [unkillable.bit
 | `npm run build`    | Static build to `dist/`                   |
 | `npm run test:e2e` | Page smoke tests (Playwright, needs build) |
 
-Deployed by Cloudflare Pages on every push to `main` (build: `npm run build`, output: `dist`).
+Deployed by Cloudflare (Workers static hosting) on every push to `main` — build `npm run build`, deploy `npx wrangler deploy`, config in `wrangler.jsonc`.
