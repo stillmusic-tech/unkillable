@@ -1,29 +1,177 @@
 ---
 import Base from '../../layouts/Base.astro'
+import snapshot from '../../data/rich-snapshot.json'
+import weak from '../../data/weak-passphrases.json'
+
+const richCount = snapshot.entries.length
+const richTotal = Math.round(snapshot.entries.reduce((sum, e) => sum + e.btc, 0))
 ---
 
 <Base title="Just hack it">
-  <h1>Just hack it</h1>
-  <p>
-    Every Bitcoin vault is locked by a key: a number picked by 256 coin flips. Flip the
-    coins, mint a real key, and see if it opens anyone's vault.
-  </p>
+  <article class="journey">
+    <!-- Beat 0 — the doubt, and the reframe -->
+    <section class="beat">
+      <p class="doubt">
+        “It’s just software. Software gets hacked every day. Someone, somewhere, will crack
+        it eventually.”
+      </p>
+      <h1>Just hack it</h1>
+      <p>
+        There’s no company to break into. No password to reset. No admin door. Every Bitcoin
+        wallet is locked by one thing: a <strong>private key</strong> — an enormous secret
+        number. “Hacking” a wallet means exactly one thing: <strong>guessing that number.</strong>
+      </p>
+      <p>So let’s try. <a href="/fundamentals/">What’s a private key? →</a></p>
+    </section>
 
-  <button id="flip">FLIP 256 COINS</button>
+    <!-- Beat 1 — make the lock -->
+    <section class="beat">
+      <h2>1. Make a key of your own</h2>
+      <p>
+        A key is just 256 coin flips — heads and tails, ones and zeros. Flip them and you’ve
+        minted a real Bitcoin key, right here in your browser.
+        <span class="trust">Nothing is sent anywhere. This never leaves your device.</span>
+      </p>
 
-  <section id="result" hidden>
-    <p><span class="label">Your key (a real Bitcoin private key):</span></p>
-    <p id="key" class="mono"></p>
-    <p><span class="label">The vault address it unlocks:</span></p>
-    <p id="address" class="mono"></p>
-    <p id="verdict"></p>
-  </section>
+      <button id="flip" class="big-orange">Flip 256 coins</button>
 
-  <p class="stub">
-    Phase 1 tracer: the check runs against a 3-address stub of the rich list. The full
-    experience — escalating key-crackers, honest timescales, the passphrase footnote —
-    arrives in Phase 2.
-  </p>
+      <div id="mine" hidden>
+        <p class="coins mono" id="coins"></p>
+        <p class="field-label">Your private key (a real one):</p>
+        <p id="key" class="mono key"></p>
+        <p class="field-label">The vault addresses it unlocks:</p>
+        <ul class="addresses mono" id="addresses"></ul>
+        <p class="point">
+          A fortune can be locked by 256 coin flips — and no one on Earth can ever flip the
+          same sequence twice. This key is now yours. For the rest of this page, <em>you</em>
+          are the wallet under attack.
+        </p>
+      </div>
+    </section>
+
+    <!-- Beat 2 — hire your attacker -->
+    <section class="beat" id="scene-crack">
+      <h2>2. Now try to guess someone else’s</h2>
+      <p>
+        Guessing a key means trying random numbers until one opens a funded wallet. Hire your
+        hardware and let it run. Watch two things: how many keys you actually try, and how far
+        the bar moves.
+      </p>
+
+      <div class="tiers" id="tiers"></div>
+      <p class="basis" id="tier-basis"></p>
+
+      <div class="crack-controls">
+        <button id="crack" class="big-orange">Start cracking</button>
+        <button id="stop" class="ghost" hidden>Stop and see the damage</button>
+      </div>
+
+      <div id="dash" hidden>
+        <div class="counter">
+          <span class="num mono" id="tried">0</span>
+          <span class="counter-label">real keys tried in your browser</span>
+        </div>
+
+        <div class="bar-wrap">
+          <div class="bar-track"><div class="bar-fill" id="bar"></div></div>
+          <p class="bar-pct mono" id="pct"></p>
+        </div>
+
+        <p class="wait" id="wait"></p>
+      </div>
+    </section>
+
+    <!-- Beat 2.5 — the scale interlude -->
+    <section class="beat scale" id="scale">
+      <h2>Why the bar will never move</h2>
+      <p>The number of possible keys is 2<sup>256</sup>. Lined up against everything we can count:</p>
+      <ul class="ladder">
+        <li>Grains of sand on Earth — about 10<sup>19</sup></li>
+        <li>Stars in the observable universe — about 10<sup>24</sup></li>
+        <li>Atoms in your body — about 10<sup>27</sup></li>
+        <li>Atoms in the whole Earth — about 10<sup>50</sup></li>
+        <li class="win">Possible Bitcoin keys — about 10<sup>77</sup></li>
+        <li>Atoms in the observable universe — about 10<sup>80</sup></li>
+      </ul>
+      <p class="point">
+        There are nearly as many possible keys as there are atoms in the universe. Picking a
+        funded one at random isn’t hard — it’s not <em>possible</em> in any span of time that
+        means anything.
+      </p>
+    </section>
+
+    <!-- Beat 3 — the turn -->
+    <section class="beat turn" id="turn" hidden>
+      <h2>3. The knife was real</h2>
+      <p>
+        Every key you just tried was a genuine Bitcoin key. If any one of them had matched a
+        funded wallet, those coins would have been yours. You checked each against a real
+        snapshot of the <strong>{richCount} richest wallets on the network</strong> — together
+        holding about {richTotal.toLocaleString()} BTC.
+      </p>
+      <p class="verdict mono" id="turn-verdict"></p>
+      <p class="point">
+        Not a metaphor. You attacked Bitcoin with a real weapon, and it did nothing at all.
+      </p>
+    </section>
+
+    <!-- Beat 4 — the honest footnote -->
+    <section class="beat">
+      <h2>4. But people <em>do</em> get hacked — here’s the truth</h2>
+      <p>
+        Nobody has ever guessed a properly made key. Bitcoin is lost when keys are
+        <strong>stolen from where humans keep them</strong> — exchange breaches, phishing,
+        malware. The maths holds; the buildings around it leak. The vault has never been
+        picked. People get robbed in the car park.
+      </p>
+
+      <details class="footnote">
+        <summary>See the one time the maths does break: a human-chosen key</summary>
+        <div class="footnote-body">
+          <p>
+            Instead of 256 coin flips, some people locked their coins with a <em>passphrase</em>
+            they could remember — a “brain wallet.” But a passphrase is a single guess, not
+            2<sup>256</sup>. Type one and watch its key appear <strong>instantly</strong>:
+          </p>
+          <div class="passphrase-row">
+            <input id="phrase" type="text" placeholder="type any passphrase…" autocomplete="off" />
+            <button id="crackphrase" class="big-orange small">Crack it</button>
+          </div>
+          <p class="suggest">
+            Try one:
+            <span id="suggestions"></span>
+          </p>
+          <div id="phrase-out" hidden>
+            <p class="field-label">Cracked in one step. The address it produces:</p>
+            <p id="phrase-address" class="mono key"></p>
+            <p id="phrase-time" class="verdict mono"></p>
+          </div>
+          <p class="src">
+            {weak.note}
+            <br />Source: <a href={weak.sourceUrl} rel="noopener">{weak.source}</a> · dataset dated {weak.retrieved}.
+          </p>
+          <p class="point">
+            Same maths, opposite outcome. The coin flips <em>are</em> the security. Never let a
+            human pick.
+          </p>
+        </div>
+      </details>
+    </section>
+
+    <!-- Beat 5 — the door -->
+    <section class="beat door">
+      <p class="door-line">
+        So you can’t pick the lock. Fine — forget the lock. Find the building it lives in and
+        burn it down.
+      </p>
+      <a href="/attack/shut-down/" class="cta">Attack 2: Shut down the server →</a>
+    </section>
+
+    <p class="src foot-src">
+      Rich-list snapshot: <a href={snapshot.sourceUrl} rel="noopener">{snapshot.source}</a> ·
+      dated {snapshot.retrieved}. Hardware speeds are generous estimates, labelled as such.
+    </p>
+  </article>
 </Base>
 
 <script>
@@ -31,41 +179,191 @@ import Base from '../../layouts/Base.astro'
     checkAgainstSnapshot,
     flipsToPrivateKey,
     keyToHex,
-    privateKeyToAddress,
+    passphraseToPrivateKey,
+    privateKeyToAddresses,
     randomFlips,
+    randomPrivateKey,
+    type DerivedAddresses,
     type RichSnapshot,
   } from '../../engines/hack/engine'
-  import snapshotJson from '../../data/rich-snapshot.stub.json'
+  import {
+    TIERS,
+    describeWait,
+    fractionSearched,
+    formatScientific,
+  } from '../../engines/hack/cracker'
+  import snapshotJson from '../../data/rich-snapshot.json'
+  import weakJson from '../../data/weak-passphrases.json'
 
   const snapshot = snapshotJson as RichSnapshot
-  const button = document.getElementById('flip') as HTMLButtonElement
-  const result = document.getElementById('result') as HTMLElement
-  const keyEl = document.getElementById('key') as HTMLElement
-  const addressEl = document.getElementById('address') as HTMLElement
-  const verdictEl = document.getElementById('verdict') as HTMLElement
+  const $ = (id: string) => document.getElementById(id)!
 
-  button.addEventListener('click', () => {
+  // ---- Beat 1: mint the visitor's own key ----
+  $('flip').addEventListener('click', () => {
+    let flips = randomFlips()
     let key: Uint8Array | null = null
     while (key === null) {
       try {
-        key = flipsToPrivateKey(randomFlips())
+        key = flipsToPrivateKey(flips)
       } catch {
-        // astronomically rare out-of-range flip result — flip again
+        flips = randomFlips()
       }
     }
-    const address = privateKeyToAddress(key)
-    const match = checkAgainstSnapshot(address, snapshot)
-    keyEl.textContent = keyToHex(key)
-    addressEl.textContent = address
-    verdictEl.textContent = match
-      ? `MATCH — this key opens "${match.label}" (${match.btc.toLocaleString()} BTC). You just robbed it.`
-      : `Checked against the rich list (${snapshot.entries.length}-address stub): NO MATCH. Nothing to steal. Flip again — the odds don't care.`
-    result.hidden = false
+    const addr = privateKeyToAddresses(key)
+    $('coins').textContent = flips.map((f) => (f ? 'H' : 'T')).join('')
+    $('key').textContent = keyToHex(key)
+    $('addresses').innerHTML = [
+      `<li><span class="tag">legacy</span> ${addr.legacy}</li>`,
+      `<li><span class="tag">3-address</span> ${addr.nested}</li>`,
+      `<li><span class="tag">bc1</span> ${addr.native}</li>`,
+    ].join('')
+    ;($('mine') as HTMLElement).hidden = false
+  })
+
+  // ---- Beat 2: hire a tier ----
+  let tierIndex = 0
+  const tiersEl = $('tiers')
+  TIERS.forEach((tier, i) => {
+    const b = document.createElement('button')
+    b.className = 'tier' + (i === 0 ? ' on' : '')
+    b.textContent = tier.name
+    b.addEventListener('click', () => {
+      tierIndex = i
+      ;[...tiersEl.children].forEach((c, ci) => c.classList.toggle('on', ci === i))
+      $('tier-basis').textContent = 'Estimate: ' + tier.basis + '.'
+      updateWait()
+    })
+    tiersEl.appendChild(b)
+  })
+  $('tier-basis').textContent = 'Estimate: ' + TIERS[0].basis + '.'
+
+  // ---- Beat 2: the cracking loop (real keys, real checks) ----
+  let running = false
+  let tried = 0
+  let hit: { label: string } | null = null
+
+  function updateWait() {
+    $('wait').textContent = describeWait(TIERS[tierIndex].keysPerSecond)
+  }
+
+  function render() {
+    ;($('tried') as HTMLElement).textContent = tried.toLocaleString()
+    const frac = fractionSearched(tried)
+    // The bar is honest: a fraction this small rounds to a flat zero width.
+    ;($('bar') as HTMLElement).style.width = Math.min(100, frac * 100) + '%'
+    $('pct').textContent = frac === 0 ? '0%' : formatScientific(frac * 100) + ' %'
+  }
+
+  function loop() {
+    if (!running) return
+    // A real batch: mint random keys, derive every address shape, check the list.
+    for (let i = 0; i < 400; i++) {
+      const addresses: DerivedAddresses = privateKeyToAddresses(randomPrivateKey())
+      const match = checkAgainstSnapshot(addresses, snapshot)
+      tried++
+      if (match) {
+        hit = match
+        running = false
+        break
+      }
+    }
+    render()
+    if (running) requestAnimationFrame(loop)
+    else if (hit) reveal()
+  }
+
+  $('crack').addEventListener('click', () => {
+    running = true
+    hit = null
+    ;($('dash') as HTMLElement).hidden = false
+    ;($('crack') as HTMLElement).hidden = true
+    ;($('stop') as HTMLElement).hidden = false
+    updateWait()
+    requestAnimationFrame(loop)
+  })
+
+  $('stop').addEventListener('click', () => {
+    running = false
+    reveal()
+  })
+
+  function reveal() {
+    ;($('crack') as HTMLElement).hidden = false
+    ;($('stop') as HTMLElement).hidden = true
+    const turn = $('turn') as HTMLElement
+    turn.hidden = false
+    $('turn-verdict').textContent = hit
+      ? `IMPOSSIBLE-ODDS HIT: one of your ${tried.toLocaleString()} keys opened “${hit.label}”. You are the luckiest being in the history of the universe.`
+      : `You tried ${tried.toLocaleString()} real keys. Matches against ${snapshot.entries.length.toLocaleString()} funded wallets: ZERO. Nothing to steal.`
+    turn.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
+  // ---- Beat 4: the passphrase footnote ----
+  const phraseInput = $('phrase') as HTMLInputElement
+  const sugg = $('suggestions')
+  ;(weakJson.suggestions as string[]).forEach((s) => {
+    const chip = document.createElement('button')
+    chip.className = 'chip'
+    chip.textContent = s
+    chip.addEventListener('click', () => {
+      phraseInput.value = s
+      crackPhrase()
+    })
+    sugg.appendChild(chip)
+  })
+
+  function crackPhrase() {
+    const phrase = phraseInput.value
+    if (!phrase) return
+    let key: Uint8Array
+    try {
+      key = passphraseToPrivateKey(phrase)
+    } catch {
+      $('phrase-time').textContent = 'That phrase produced an invalid key — try another.'
+      ;($('phrase-out') as HTMLElement).hidden = false
+      return
+    }
+    const addr = privateKeyToAddresses(key)
+    $('phrase-address').textContent = addr.legacy
+    $('phrase-time').textContent =
+      'Time to derive it: one SHA-256 — under a millisecond. A machine tried this exact phrase years ago.'
+    ;($('phrase-out') as HTMLElement).hidden = false
+  }
+
+  $('crackphrase').addEventListener('click', crackPhrase)
+  phraseInput.addEventListener('keydown', (e) => {
+    if ((e as KeyboardEvent).key === 'Enter') crackPhrase()
   })
 </script>
 
 <style>
-  #flip {
+  .journey {
+    display: flex;
+    flex-direction: column;
+    gap: 3.5rem;
+  }
+  .beat {
+    scroll-margin-top: 1.5rem;
+  }
+  .doubt {
+    font-size: 1.35rem;
+    font-style: italic;
+    color: var(--dim);
+    border-left: 3px solid #2a3140;
+    padding-left: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  h2 {
+    font-size: 1.5rem;
+    margin-bottom: 0.75rem;
+  }
+  .trust {
+    display: block;
+    color: var(--orange);
+    font-size: 0.9rem;
+    margin-top: 0.4rem;
+  }
+  .big-orange {
     background: var(--orange);
     color: #0a0a0a;
     border: none;
@@ -75,20 +373,222 @@ import Base from '../../layouts/Base.astro'
     padding: 0.9rem 2rem;
     cursor: pointer;
   }
-  .label {
-    color: var(--dim);
-    font-size: 0.9rem;
+  .big-orange.small {
+    font-size: 0.95rem;
+    padding: 0.6rem 1.1rem;
+  }
+  .ghost {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid #2a3140;
+    border-radius: 8px;
+    font-size: 1rem;
+    padding: 0.9rem 1.5rem;
+    cursor: pointer;
+    margin-left: 0.75rem;
   }
   .mono {
     font-family: ui-monospace, 'SF Mono', Menlo, monospace;
-    font-size: 0.85rem;
     word-break: break-all;
+  }
+  .field-label {
+    color: var(--dim);
+    font-size: 0.85rem;
+    margin-bottom: 0.2rem;
+    margin-top: 1rem;
+  }
+  .key,
+  .addresses {
     background: var(--panel);
     padding: 0.6rem 0.8rem;
     border-radius: 6px;
+    font-size: 0.85rem;
   }
-  #verdict {
+  .coins {
+    color: var(--dim);
+    font-size: 0.7rem;
+    line-height: 1.4;
+    max-height: 3.5rem;
+    overflow: hidden;
+    letter-spacing: 0.15em;
+  }
+  .addresses {
+    list-style: none;
+    padding: 0.8rem;
+    margin: 0.2rem 0 0;
+  }
+  .addresses li {
+    padding: 0.15rem 0;
+  }
+  .tag {
+    display: inline-block;
+    min-width: 5.5rem;
+    color: var(--orange);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .point {
+    margin-top: 1.25rem;
+    font-size: 1.05rem;
+  }
+  .tiers {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin: 1rem 0 0.5rem;
+  }
+  .tier {
+    background: var(--panel);
+    color: var(--dim);
+    border: 1px solid #2a3140;
+    border-radius: 999px;
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
+  .tier.on {
+    color: #0a0a0a;
+    background: var(--orange);
+    border-color: var(--orange);
+    font-weight: 700;
+  }
+  .basis {
+    color: var(--dim);
+    font-size: 0.85rem;
+    min-height: 1.2rem;
+  }
+  .crack-controls {
+    margin: 1rem 0;
+  }
+  .counter {
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    margin: 1.25rem 0;
+  }
+  .counter .num {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--orange);
+    font-variant-numeric: tabular-nums;
+  }
+  .counter-label {
+    color: var(--dim);
+    font-size: 0.9rem;
+  }
+  .bar-wrap {
+    margin: 1rem 0;
+  }
+  .bar-track {
+    height: 14px;
+    background: var(--panel);
+    border: 1px solid #2a3140;
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .bar-fill {
+    height: 100%;
+    width: 0;
+    background: var(--orange);
+  }
+  .bar-pct {
+    color: var(--dim);
+    font-size: 0.8rem;
+    margin-top: 0.4rem;
+  }
+  .wait {
+    font-size: 1.05rem;
+    line-height: 1.6;
+  }
+  .scale .ladder {
+    list-style: none;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+  .scale .ladder li {
+    background: var(--panel);
+    border-radius: 6px;
+    padding: 0.6rem 0.9rem;
+  }
+  .scale .ladder .win {
+    background: #2a1c07;
+    border: 1px solid var(--orange);
+    color: var(--orange);
+    font-weight: 700;
+  }
+  .turn {
+    border: 1px solid var(--orange);
+    border-radius: 10px;
+    padding: 1.5rem;
+    background: #140f06;
+  }
+  .verdict {
+    font-weight: 700;
+    font-size: 1.05rem;
+    margin: 1rem 0;
+  }
+  .footnote {
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 0.5rem 1rem;
     margin-top: 1rem;
-    font-weight: 600;
+  }
+  .footnote summary {
+    cursor: pointer;
+    color: var(--orange);
+    padding: 0.5rem 0;
+  }
+  .footnote-body {
+    padding-top: 0.5rem;
+  }
+  .passphrase-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin: 0.75rem 0;
+  }
+  .passphrase-row input {
+    flex: 1 1 14rem;
+    background: var(--bg);
+    border: 1px solid #2a3140;
+    border-radius: 8px;
+    color: var(--text);
+    padding: 0.6rem 0.9rem;
+    font-size: 1rem;
+  }
+  .suggest {
+    font-size: 0.85rem;
+    color: var(--dim);
+  }
+  .chip {
+    background: transparent;
+    border: 1px solid #2a3140;
+    border-radius: 999px;
+    color: var(--text);
+    padding: 0.25rem 0.7rem;
+    margin: 0.15rem;
+    font-size: 0.8rem;
+    cursor: pointer;
+  }
+  .src {
+    color: var(--dim);
+    font-size: 0.8rem;
+    line-height: 1.5;
+  }
+  .foot-src {
+    border-top: 1px solid #1c212b;
+    padding-top: 1.25rem;
+    margin-top: 1rem;
+  }
+  .door {
+    text-align: center;
+  }
+  .door-line {
+    font-size: 1.25rem;
+    font-style: italic;
+    margin-bottom: 1.5rem;
   }
 </style>

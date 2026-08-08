@@ -1,0 +1,14 @@
+{
+  "source": "Notorious brain-wallet passphrases; drainage pattern documented by Ryan Castellucci, DEF CON 23 (2015), “Cracking Cryptocurrency Brainwallets”",
+  "sourceUrl": "https://rya.nc/cracking_cryptocurrency_brainwallets.pdf",
+  "retrieved": "2026-08-08",
+  "note": "A brain wallet turns a passphrase into a key with a single SHA-256 — so a human-chosen phrase is one guess, not 2^256. Automated bots watch for these and have swept funds within seconds of them being funded. The phrases below all produce real, well-known Bitcoin addresses that anyone can regenerate instantly.",
+  "suggestions": [
+    "password",
+    "123456",
+    "to be or not to be",
+    "correct horse battery staple",
+    "bitcoin",
+    "letmein"
+  ]
+}

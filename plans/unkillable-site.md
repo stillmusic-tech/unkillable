@@ -1,6 +1,6 @@
 # Plan: Unkillable — the site that lets you attack Bitcoin
 
-**PRD:** https://github.com/stillmusic-tech/unkillable/issues/1 (vault twin: `PRDs/Unkillable/Unkillable — Site PRD.md`)  ·  **Status:** Phase 1 COMPLETE (2026-08-08) — live at https://unkillable.bitcoin-fix.com via Cloudflare Workers static hosting, push-to-deploy from `main`; engine + smoke tests green locally and in CI. Next: Phase 2 (Attack 1 complete).
+**PRD:** https://github.com/stillmusic-tech/unkillable/issues/1 (vault twin: `PRDs/Unkillable/Unkillable — Site PRD.md`)  ·  **Status:** Phase 2 COMPLETE (2026-08-08) — Attack 1 "Just hack it" playable end to end: 256-coin key minting (all three address shapes), six escalating cracker tiers with honest universe-lifetime timescales and a bar frozen at ~10⁻⁷²%, live cracking loop trying real keys against a bundled 100-address rich-list snapshot, the turn revealing zero matches, and the passphrase footnote cracking a weak brain-wallet phrase in one SHA-256. 32 tests green (18 Vitest + 14 Playwright). Next: Phase 3 (Attack 1 feel check — HITL).
 
 Canonical per-page behaviour lives in the vault's Unkillable Decision Register (27+ locked decisions) and eleven page-spec notes. If this plan and those notes disagree, the notes win.
 

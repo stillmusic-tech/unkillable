@@ -28,10 +28,33 @@ for (const [path, expectedText] of routes) {
   })
 }
 
-test('attack 1 tracer: flipping coins mints a key and checks it', async ({ page }) => {
+test('attack 1: flipping coins mints a real key and its three addresses', async ({ page }) => {
   await page.goto('/attack/hack')
   await page.getByRole('button', { name: /flip 256 coins/i }).click()
   await expect(page.locator('#key')).toContainText(/^[0-9a-f]{64}$/)
-  await expect(page.locator('#address')).toContainText(/^1/)
-  await expect(page.locator('#verdict')).toContainText(/no match/i)
+  const addresses = page.locator('#addresses li')
+  await expect(addresses).toHaveCount(3)
+  await expect(addresses.nth(0)).toContainText(/1[A-Za-z0-9]{20,}/) // legacy
+  await expect(addresses.nth(2)).toContainText(/bc1[a-z0-9]{20,}/) // native segwit
+})
+
+test('attack 1: cracking tries real keys and the turn reveals zero matches', async ({
+  page,
+}) => {
+  await page.goto('/attack/hack')
+  await page.getByRole('button', { name: /start cracking/i }).click()
+  // Let a few real batches run (counter shows a non-zero digit), then stop.
+  await expect(page.locator('#tried')).toHaveText(/[1-9]/, { timeout: 5000 })
+  await page.getByRole('button', { name: /stop and see the damage/i }).click()
+  await expect(page.locator('#turn')).toBeVisible()
+  await expect(page.locator('#turn-verdict')).toContainText(/zero|matches/i)
+})
+
+test('attack 1: the passphrase footnote cracks a weak phrase instantly', async ({ page }) => {
+  await page.goto('/attack/hack')
+  await page.locator('summary').click()
+  await page.locator('#phrase').fill('password')
+  await page.getByRole('button', { name: /^crack it$/i }).click()
+  await expect(page.locator('#phrase-address')).toContainText(/^1/)
+  await expect(page.locator('#phrase-time')).toContainText(/sha-256|millisecond/i)
 })
