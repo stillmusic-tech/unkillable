@@ -14,7 +14,7 @@ const routes: Array<[path: string, expectedText: string]> = [
   ['/attack/time', 'Everything dies eventually'],
   ['/attack/quantum', 'a computer that breaks the maths itself'],
   ['/fundamentals', 'What is Bitcoin?'],
-  ['/about', 'The honesty pledge'],
+  ['/about', 'The pledge'],
 ]
 
 for (const [path, expectedText] of routes) {
