@@ -74,6 +74,20 @@ const current = Astro.url.pathname
       sans-serif;
     line-height: 1.5;
   }
+  /* Type floor: nothing renders below 16px. Buttons and inputs default to the
+     browser's 13px, and sup/sub to `smaller`, so they need saying explicitly.
+     A page's own rule for a control still wins — this only sets the floor. */
+  button,
+  input,
+  select,
+  textarea {
+    font-family: inherit;
+    font-size: 1rem;
+  }
+  sup,
+  sub {
+    font-size: 1rem;
+  }
   nav {
     display: flex;
     flex-wrap: wrap;

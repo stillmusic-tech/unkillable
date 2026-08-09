@@ -441,21 +441,6 @@ const richTotal = Math.round(snapshot.entries.reduce((sum, e) => sum + e.btc, 0)
     gap: 0.6rem;
     margin: 1rem 0 0.5rem;
   }
-  .tier {
-    background: var(--panel);
-    color: var(--dim);
-    border: 1px solid #2a3140;
-    border-radius: 999px;
-    padding: 0.5rem 1rem;
-    font-size: 1rem;
-    cursor: pointer;
-  }
-  .tier.on {
-    color: #0a0a0a;
-    background: var(--orange);
-    border-color: var(--orange);
-    font-weight: 700;
-  }
   .basis {
     color: var(--dim);
     font-size: 1rem;
@@ -566,16 +551,6 @@ const richTotal = Math.round(snapshot.entries.reduce((sum, e) => sum + e.btc, 0)
     font-size: 1rem;
     color: var(--dim);
   }
-  .chip {
-    background: transparent;
-    border: 1px solid #2a3140;
-    border-radius: 999px;
-    color: var(--text);
-    padding: 0.25rem 0.7rem;
-    margin: 0.15rem;
-    font-size: 1rem;
-    cursor: pointer;
-  }
   .src {
     color: var(--dim);
     font-size: 1rem;
@@ -595,3 +570,35 @@ const richTotal = Math.round(snapshot.entries.reduce((sum, e) => sum + e.btc, 0)
     margin-bottom: 1.5rem;
   }
 </style>
+
+<!-- The tier and passphrase-suggestion buttons are created in JS, so Astro's
+     scoped styles can't reach them — they need to be global or they render as
+     raw browser default buttons. -->
+<style is:global>
+  .tier {
+    background: var(--panel);
+    color: var(--dim);
+    border: 1px solid #2a3140;
+    border-radius: 999px;
+    padding: 0.5rem 1rem;
+    font-size: 1rem;
+    cursor: pointer;
+  }
+  .tier.on {
+    color: #0a0a0a;
+    background: var(--orange);
+    border-color: var(--orange);
+    font-weight: 700;
+  }
+  .chip {
+    background: transparent;
+    border: 1px solid #2a3140;
+    border-radius: 999px;
+    color: var(--text);
+    padding: 0.25rem 0.7rem;
+    margin: 0.15rem;
+    font-size: 1rem;
+    cursor: pointer;
+  }
+</style>
+
