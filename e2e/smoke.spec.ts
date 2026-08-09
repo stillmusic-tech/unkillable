@@ -13,7 +13,7 @@ const routes: Array<[path: string, expectedText: string]> = [
   ['/attack/print', 'open it up and give yourself some'],
   ['/attack/time', 'Everything dies eventually'],
   ['/attack/quantum', 'a computer that breaks the maths itself'],
-  ['/fundamentals', 'explained from zero'],
+  ['/fundamentals', 'What actually is Bitcoin?'],
   ['/about', 'The honesty pledge'],
 ]
 
@@ -229,8 +229,19 @@ test('fundamentals: chapter rail lists all eight and focuses a chapter on click'
   // Clicking a rail item must NOT set a #hash (a hash opens the overlay).
   await expect(page).toHaveURL(/\/fundamentals$/)
   await expect(page.locator('#fund-overlay')).toBeHidden()
-  // Scrolling onward moves the highlight without a click.
-  await page.mouse.wheel(0, 2000)
+  // Wait for the click's smooth glide to settle — wheeling mid-glide can
+  // snap-land back on the same chapter, which isn't what we're testing.
+  await page.waitForFunction(
+    () =>
+      new Promise((resolve) => {
+        const y = window.scrollY
+        setTimeout(() => resolve(window.scrollY === y), 250)
+      }),
+  )
+  // Scrolling onward moves the highlight without a click. Scroll
+  // programmatically — a synthetic wheel gesture races Chromium's snap
+  // physics under parallel-worker load and can land back where it started.
+  await page.evaluate(() => window.scrollTo({ top: window.scrollY + 2000 }))
   await expect(items.nth(3)).not.toHaveClass(/active/, { timeout: 5000 })
 })
 

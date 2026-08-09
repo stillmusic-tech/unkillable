@@ -4,14 +4,6 @@ import { CARDS } from '../fundamentals/cards'
 ---
 
 <Base title="Bitcoin Fundamentals">
-  <section class="fchapter fhero">
-    <div class="fhero-inner">
-      <h1>Bitcoin Fundamentals</h1>
-      <p class="intro">Everything on this site, explained from zero. About two minutes each.</p>
-      <p class="fhero-hint">Scroll, or pick a chapter →</p>
-    </div>
-  </section>
-
   <div class="ladder">
     {
       CARDS.map((card, i) => (
@@ -60,18 +52,6 @@ import { CARDS } from '../fundamentals/cards'
     justify-content: center;
     scroll-snap-align: start;
     padding: 2rem 1.5rem;
-  }
-  .fhero-inner {
-    text-align: center;
-  }
-  .intro {
-    font-size: 1.1rem;
-    color: var(--text);
-  }
-  .fhero-hint {
-    margin-top: 2.5rem;
-    color: var(--dim);
-    font-size: 0.9rem;
   }
   .fcard {
     width: 100%;
