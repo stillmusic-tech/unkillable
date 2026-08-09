@@ -7,7 +7,7 @@ const routes: Array<[path: string, expectedText: string]> = [
   ['/', 'UNKILLABLE'],
   ['/attack', 'Think you can stop it'],
   ['/attack/hack', 'Just hack it'],
-  ['/attack/shut-down', 'Shut down the server'],
+  ['/attack/shut-down', 'pull the plug'],
   ['/attack/51-percent', 'The 51% attack'],
   ['/attack/ban', 'Ban it'],
   ['/attack/print', 'Print more of it'],
@@ -81,6 +81,32 @@ test('armoury: running Attack 1 stamps its card FAILED and it survives a reload'
   await expect(page.locator('.weapon[data-attack="hack"] .stamp')).toContainText(/failed/i)
   await page.reload()
   await expect(page.locator('.weapon[data-attack="hack"] .stamp')).toBeVisible()
+})
+
+test('attack 2: killing nodes leaves the network OPERATIONAL and dark-earth regrows', async ({
+  page,
+}) => {
+  await page.goto('/attack/shut-down')
+  await expect(page.locator('#net-status')).toHaveText(/operational/i)
+  const killedBefore = await page.locator('#killed').textContent()
+  expect(killedBefore).toBe('0')
+
+  // Raid: arm, then tap the globe's centre (guaranteed on the disc) — killed
+  // count rises, status holds.
+  await page.getByRole('button', { name: /single raid/i }).click()
+  await page.locator('#globe').click() // default: element centre
+  await expect(page.locator('#killed')).not.toHaveText('0')
+  await expect(page.locator('#net-status')).toHaveText(/operational/i)
+
+  // Dark earth: everything dies, then the network regrows and the turn shows.
+  await page.getByRole('button', { name: /dark earth/i }).click()
+  await expect(page.locator('#reveal')).toBeVisible({ timeout: 10000 })
+  await expect(page.locator('#reveal')).toContainText(/of these lights/i)
+  await expect(page.locator('#net-status')).toHaveText(/operational/i)
+  // Regrowth brought nodes back — not everything is dead at the end.
+  await expect
+    .poll(async () => Number((await page.locator('#running').textContent())?.replace(/\D/g, '')))
+    .toBeGreaterThan(0)
 })
 
 test('attack 1: flipping coins mints a real key and its three addresses', async ({ page }) => {

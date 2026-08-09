@@ -81,4 +81,28 @@ describe('globe node bookkeeping (Attack 2 substrate)', () => {
     expect(g.aliveCount()).toBe(2)
     g.destroy()
   })
+
+  it('killIndices kills only the named nodes and reports the count', () => {
+    const g = createGlobe(fakeCanvas(), nodes)
+    expect(g.killIndices([0, 2, 2])).toBe(2) // duplicate counted once
+    expect(g.aliveCount()).toBe(nodes.length - 2)
+    g.destroy()
+  })
+
+  it('getNodes returns a detached copy that cannot mutate internal state', () => {
+    const g = createGlobe(fakeCanvas(), nodes)
+    const copy = g.getNodes()
+    copy[0].alive = false
+    expect(g.aliveCount()).toBe(nodes.length) // untouched
+    g.destroy()
+  })
+
+  it('darkEarth kills everything, and reviveAll brings it all back', () => {
+    const g = createGlobe(fakeCanvas(), nodes)
+    g.darkEarth()
+    expect(g.aliveCount()).toBe(0)
+    g.reviveAll()
+    expect(g.aliveCount()).toBe(nodes.length)
+    g.destroy()
+  })
 })

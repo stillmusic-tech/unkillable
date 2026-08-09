@@ -20,6 +20,9 @@ export interface GlobeOptions {
   showTransactions?: boolean
   /** Radius as a fraction of the smaller canvas dimension (0–0.5). */
   radiusFraction?: number
+  /** Fired on a tap (a click that wasn't a drag) with the nearest front-facing
+   * node, or null if the tap missed the globe. Used by Attack 2 to aim. */
+  onTap?: (hit: { index: number; lat: number; lon: number } | null) => void
 }
 
 interface Vec3 {
@@ -51,6 +54,14 @@ export interface GlobeHandle {
   setNodes(nodes: GlobeNode[]): void
   /** Kill every node whose coordinates fall inside the predicate (Attack 2). */
   killWhere(pred: (n: GlobeNode) => boolean): number
+  /** Kill specific nodes by index; returns how many newly died. */
+  killIndices(indices: number[]): number
+  /** Read-only view of the current nodes (for the page to run kill maths). */
+  getNodes(): GlobeNode[]
+  /** Kill everything, then reveal the lone satellite survivor in orbit. */
+  darkEarth(): void
+  /** Relight every node over `durationMs`, then call onDone — the regrowth turn. */
+  regrow(durationMs: number, onDone?: () => void): void
   reviveAll(): void
   aliveCount(): number
   destroy(): void
@@ -79,6 +90,18 @@ export function createGlobe(
   let arcs: Arc[] = []
   let arcSeed = 1
   let destroyed = false
+
+  // Attack-2 state: the lone satellite survivor and the regrowth animation.
+  let satelliteVisible = false
+  let regrowing = false
+  let regrowStart: number | null = null
+  let regrowDuration = 2200
+  let regrowOrder: number[] = []
+  let regrowDone: (() => void) | null = null
+
+  // Geometry cache from the last drawn frame, so tap-picking uses exactly what
+  // the visitor sees (same rotation, same projection).
+  let lastGeom = { cx: 0, cy: 0, R: 1 }
 
   // Deterministic PRNG so we don't call Math.random (kept side-effect-free and
   // repeatable); seeded per-arc.
@@ -124,6 +147,23 @@ export function createGlobe(
     const cx = w / 2
     const cy = h / 2
     const R = Math.min(w, h) * radiusFraction
+    lastGeom = { cx, cy, R }
+
+    // Regrowth progression: relight nodes in order over the duration.
+    if (regrowing) {
+      if (regrowStart === null) regrowStart = now
+      const frac = Math.min(1, (now - regrowStart) / regrowDuration)
+      const lit = Math.floor(frac * regrowOrder.length)
+      for (let k = 0; k < lit; k++) nodes[regrowOrder[k]].alive = true
+      if (frac >= 1) {
+        regrowing = false
+        regrowStart = null
+        satelliteVisible = false
+        const cb = regrowDone
+        regrowDone = null
+        if (cb) cb()
+      }
+    }
 
     ctx.clearRect(0, 0, w, h)
 
@@ -227,14 +267,70 @@ export function createGlobe(
       }
     }
 
+    // The satellite survivor — one light that refuses to go out, orbiting
+    // outside the dark globe. It carries a copy that rebuilds everything.
+    if (satelliteVisible) {
+      const orbit = R * 1.28
+      const angle = now / 1400
+      const sx = cx + Math.cos(angle) * orbit
+      const sy = cy + Math.sin(angle) * orbit * 0.55
+      // faint orbit ring
+      ctx.beginPath()
+      ctx.ellipse(cx, cy, orbit, orbit * 0.55, 0, 0, Math.PI * 2)
+      ctx.strokeStyle = 'rgba(120,150,200,0.15)'
+      ctx.lineWidth = 1
+      ctx.stroke()
+      ctx.beginPath()
+      ctx.arc(sx, sy, 3.4, 0, Math.PI * 2)
+      ctx.fillStyle = 'rgba(255,210,140,0.98)'
+      ctx.shadowColor = 'rgba(255,180,80,1)'
+      ctx.shadowBlur = 14
+      ctx.fill()
+      ctx.shadowBlur = 0
+    }
+
     requestAnimationFrame(draw)
   }
 
-  // --- Interaction: drag to spin -------------------------------------------
+  // Nearest front-facing node to a client point, using the last frame's
+  // geometry. Returns the index and coords, or null if the tap missed.
+  function pickAt(clientX: number, clientY: number) {
+    const rect = canvas.getBoundingClientRect()
+    const px = clientX - rect.left
+    const py = clientY - rect.top
+    const { cx, cy, R } = lastGeom
+    let best = -1
+    let bestD = Infinity
+    for (let i = 0; i < nodes.length; i++) {
+      const p = project(latLonToVec3(nodes[i].lat, nodes[i].lon))
+      if (p.z < 0) continue
+      const sx = cx + p.x * R
+      const sy = cy - p.y * R
+      const d = (sx - px) ** 2 + (sy - py) ** 2
+      if (d < bestD) {
+        bestD = d
+        best = i
+      }
+    }
+    // Within ~28px of a node, or anywhere on the disc, counts as a hit.
+    const onDisc = (px - cx) ** 2 + (py - cy) ** 2 <= R * R
+    if (best >= 0 && (bestD <= 28 * 28 || onDisc)) {
+      return { index: best, lat: nodes[best].lat, lon: nodes[best].lon }
+    }
+    return null
+  }
+
+  // --- Interaction: drag to spin, tap to aim -------------------------------
+  let downX = 0
+  let downY = 0
+  let moved = false
   function onDown(clientX: number, clientY: number) {
     dragging = true
     lastX = clientX
     lastY = clientY
+    downX = clientX
+    downY = clientY
+    moved = false
     velocity = 0
   }
   function onMove(clientX: number, clientY: number) {
@@ -246,14 +342,19 @@ export function createGlobe(
     velocity = dx * 0.05
     lastX = clientX
     lastY = clientY
+    if (Math.abs(clientX - downX) > 4 || Math.abs(clientY - downY) > 4) moved = true
   }
-  function onUp() {
+  function onUp(clientX?: number, clientY?: number) {
     dragging = false
+    // A press that didn't drift is a tap — aim the weapon.
+    if (!moved && options.onTap && clientX !== undefined && clientY !== undefined) {
+      options.onTap(pickAt(clientX, clientY))
+    }
   }
 
   const mdown = (e: MouseEvent) => onDown(e.clientX, e.clientY)
   const mmove = (e: MouseEvent) => onMove(e.clientX, e.clientY)
-  const mup = () => onUp()
+  const mup = (e: MouseEvent) => onUp(e.clientX, e.clientY)
   const tstart = (e: TouchEvent) => {
     if (e.touches[0]) onDown(e.touches[0].clientX, e.touches[0].clientY)
   }
@@ -263,7 +364,10 @@ export function createGlobe(
       e.preventDefault()
     }
   }
-  const tend = () => onUp()
+  const tend = (e: TouchEvent) => {
+    const t = e.changedTouches[0]
+    onUp(t?.clientX, t?.clientY)
+  }
   const onResize = () => resize()
 
   canvas.addEventListener('mousedown', mdown)
@@ -293,8 +397,44 @@ export function createGlobe(
       arcs = arcs.filter((a) => nodes[a.from]?.alive && nodes[a.to]?.alive)
       return killed
     },
+    killIndices(indices) {
+      let killed = 0
+      for (const i of indices) {
+        if (nodes[i]?.alive) {
+          nodes[i].alive = false
+          killed++
+        }
+      }
+      arcs = arcs.filter((a) => nodes[a.from]?.alive && nodes[a.to]?.alive)
+      return killed
+    },
+    getNodes() {
+      return nodes.map((n) => ({ ...n }))
+    },
+    darkEarth() {
+      for (const n of nodes) n.alive = false
+      arcs = []
+      satelliteVisible = true
+      regrowing = false
+      regrowStart = null
+    },
+    regrow(durationMs, onDone) {
+      regrowDuration = durationMs
+      // Relight in a fixed shuffled order so it reads as spreading, not sweeping.
+      regrowOrder = nodes.map((_, i) => i)
+      for (let i = regrowOrder.length - 1; i > 0; i--) {
+        const j = Math.floor(rand() * (i + 1))
+        ;[regrowOrder[i], regrowOrder[j]] = [regrowOrder[j], regrowOrder[i]]
+      }
+      for (const n of nodes) n.alive = false
+      regrowing = true
+      regrowStart = null
+      regrowDone = onDone ?? null
+    },
     reviveAll() {
       for (const n of nodes) n.alive = true
+      satelliteVisible = false
+      regrowing = false
     },
     aliveCount() {
       return nodes.filter((n) => n.alive).length

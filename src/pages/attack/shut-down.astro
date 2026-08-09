@@ -3,7 +3,378 @@ import Base from '../../layouts/Base.astro'
 ---
 
 <Base title="Shut down the server">
-  <h1>Shut down the server</h1>
-  <p>Raid buildings, black out cities, switch off the whole earth — and watch the scoreboard.</p>
-  <p class="stub">This weapon is being forged — Phase 7. The globe, the weapons panel and the satellite arrive there.</p>
+  <p class="brief">Everything runs somewhere. Find Bitcoin's server and pull the plug.</p>
+
+  <!-- Scoreboard — always visible; the heartbeat that doesn't care. -->
+  <div class="scoreboard">
+    <div class="status">
+      <span class="dot"></span>
+      <span>NETWORK: <strong id="net-status">OPERATIONAL</strong></span>
+    </div>
+    <div class="counts">
+      <span>Nodes you've killed: <strong id="killed">0</strong></span>
+      <span>Still running: <strong id="running">—</strong></span>
+    </div>
+    <div class="mini-strip" id="mini-strip" title="Blocks are still arriving">
+      <span class="mini-label">last block</span>
+      <span class="mini-height" id="mini-height">…</span>
+    </div>
+  </div>
+
+  <!-- The weapons: four escalating buttons. -->
+  <div class="weapons" role="group" aria-label="Weapons">
+    <button class="weapon-btn" data-mode="raid">🎯 Single raid</button>
+    <button class="weapon-btn" data-mode="city">🏙️ City blackout</button>
+    <button class="weapon-btn" data-mode="country">🚫 Country ban</button>
+    <button class="weapon-btn danger" data-mode="earth">☢️ Dark earth</button>
+  </div>
+  <p class="hint" id="hint">Pick a weapon, then tap the globe to aim.</p>
+
+  <div class="globe-wrap">
+    <canvas id="globe" aria-hidden="true"></canvas>
+    <div id="toasts" class="toasts" aria-live="polite"></div>
+  </div>
+
+  <p class="wink">No actual nodes were harmed. All destruction is simulated in your browser.</p>
+
+  <!-- The turn (revealed after Dark Earth regrows). -->
+  <section id="reveal" class="reveal" hidden>
+    <p class="reveal-line">
+      One copy rebuilt everything. A node costs less than a games console — you could be one
+      of these lights.
+    </p>
+    <a class="cta" href="/attack/51-percent">Can't kill it? Buy it. →</a>
+  </section>
+
+  <!-- Honest footnote. -->
+  <details class="footnote">
+    <summary>What <em>can</em> be shut down?</summary>
+    <p>
+      Exchanges can be seized — they're companies with offices. A local internet blackout
+      hurts users <em>in that country</em> until they route around it (satellite, mesh,
+      phone data). But the network itself — the shared ledger every node holds a full copy
+      of — has never gone down since January 2009.
+    </p>
+  </details>
 </Base>
+
+<script>
+  import { createGlobe, type GlobeHandle } from '../../globe/globe'
+  import { createDataTap, snapshotNodes } from '../../tap/tap'
+  import {
+    MODE_RADIUS_DEG,
+    isChinaRegion,
+    nearestNode,
+    nodesWithin,
+    type ShutdownMode,
+  } from '../../engines/shutdown/engine'
+  import { browserStorage, markAttempted } from '../../progress/progress'
+
+  const $ = (id: string) => document.getElementById(id)!
+  const canvas = $('globe') as HTMLCanvasElement
+  const nodeData = snapshotNodes().data
+  const TOTAL = nodeData.points.length
+
+  let mode: ShutdownMode | null = null
+  let countryBans = 0
+  let earthFired = false
+
+  const globe: GlobeHandle = createGlobe(canvas, nodeData.points, {
+    autoRotateDegPerSec: 4,
+    showTransactions: true,
+    onTap: (hit) => onAim(hit),
+  })
+
+  // --- Scoreboard ----------------------------------------------------------
+  function refreshCounts() {
+    const running = globe.aliveCount()
+    $('running').textContent = running.toLocaleString('en-GB')
+    $('killed').textContent = (TOTAL - running).toLocaleString('en-GB')
+  }
+  refreshCounts()
+  setInterval(refreshCounts, 250) // keeps up during the regrowth animation
+
+  // Mini live-block indicator — proof the heartbeat ignores the rampage.
+  const tap = createDataTap()
+  async function refreshStrip() {
+    const res = await tap.recentBlocks()
+    const top = res.data[0]
+    if (top) $('mini-height').textContent = '#' + top.height.toLocaleString('en-GB')
+  }
+  refreshStrip()
+  setInterval(refreshStrip, 30_000)
+
+  // --- Toasts --------------------------------------------------------------
+  function toast(msg: string, ms = 4000) {
+    const el = document.createElement('div')
+    el.className = 'toast'
+    el.textContent = msg
+    $('toasts').appendChild(el)
+    setTimeout(() => el.classList.add('show'), 10)
+    setTimeout(() => {
+      el.classList.remove('show')
+      setTimeout(() => el.remove(), 400)
+    }, ms)
+  }
+
+  // --- Weapon selection ----------------------------------------------------
+  document.querySelectorAll<HTMLButtonElement>('.weapon-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const m = btn.dataset.mode as ShutdownMode
+      if (m === 'earth') {
+        fireDarkEarth()
+        return
+      }
+      mode = m
+      document.querySelectorAll('.weapon-btn').forEach((b) => b.classList.remove('armed'))
+      btn.classList.add('armed')
+      $('hint').textContent =
+        m === 'raid'
+          ? 'Armed: tap any node to raid it.'
+          : m === 'city'
+            ? 'Armed: tap a city to black it out.'
+            : 'Armed: tap a country to ban it.'
+    })
+  })
+
+  // --- Aiming (a tap on the globe) -----------------------------------------
+  function onAim(hit: { index: number; lat: number; lon: number } | null) {
+    if (!mode || earthFired) return
+    if (!hit) return
+    const nodes = globe.getNodes()
+
+    if (mode === 'raid') {
+      const i = nearestNode(nodes, hit)
+      if (i >= 0 && nodes[i].alive !== false) {
+        globe.killIndices([i])
+        toast('That was a complete copy of the whole ledger. There are thousands more.')
+      }
+    } else {
+      const radius = MODE_RADIUS_DEG[mode]
+      const idx = nodesWithin(nodes, hit, radius).filter((i) => nodes[i].alive !== false)
+      const killed = globe.killIndices(idx)
+      if (mode === 'city') {
+        toast(`${killed} nodes dark in that area. The other ${globe.aliveCount()} never noticed.`)
+      } else {
+        countryBans++
+        if (isChinaRegion(hit)) {
+          toast('China actually did this in July 2021 — banned all mining. Recovered in months.', 6000)
+        } else {
+          toast(`${countryBans} ${countryBans === 1 ? 'region' : 'regions'} banned. Bitcoin has noticed nothing.`)
+        }
+      }
+    }
+    refreshCounts()
+  }
+
+  // --- Dark Earth: the turn ------------------------------------------------
+  function fireDarkEarth() {
+    if (earthFired) return
+    earthFired = true
+    mode = null
+    document.querySelectorAll('.weapon-btn').forEach((b) => {
+      b.classList.remove('armed')
+      ;(b as HTMLButtonElement).disabled = true
+    })
+    globe.darkEarth()
+    refreshCounts()
+    $('hint').textContent = 'Every light out — except one, in orbit.'
+    toast('Everything is dark. Except one light that refuses to go out: a satellite in orbit.', 5000)
+
+    // The satellite holds a copy. After a beat, the network rebuilds itself.
+    setTimeout(() => {
+      toast('One copy rebuilds everything. Watch.', 4000)
+      globe.regrow(2600, () => {
+        refreshCounts()
+        $('hint').textContent = 'The network regrew on its own. There was never an off switch.'
+        const reveal = $('reveal') as HTMLElement
+        reveal.hidden = false
+        reveal.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        markAttempted(browserStorage(), 'shut-down')
+      })
+    }, 2200)
+  }
+</script>
+
+<style>
+  .brief {
+    font-size: 1.2rem;
+    color: var(--text);
+    margin: 0.25rem 0 1.25rem;
+  }
+  .scoreboard {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem 1.75rem;
+    align-items: center;
+    background: var(--panel);
+    border: 1px solid #1c212b;
+    border-radius: 10px;
+    padding: 0.85rem 1.1rem;
+    font-size: 0.9rem;
+  }
+  .status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+  }
+  .status strong {
+    color: #3fb950;
+    letter-spacing: 0.05em;
+  }
+  .dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #3fb950;
+    box-shadow: 0 0 8px #3fb950;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    50% {
+      opacity: 0.35;
+    }
+  }
+  .counts {
+    display: flex;
+    gap: 1.25rem;
+    color: var(--dim);
+  }
+  .counts strong {
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+  .mini-strip {
+    margin-left: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+  }
+  .mini-label {
+    font-size: 0.65rem;
+    color: var(--dim);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .mini-height {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .weapons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin-top: 1.25rem;
+  }
+  .weapon-btn {
+    background: #0f141c;
+    color: var(--text);
+    border: 1px solid #2a3140;
+    border-radius: 8px;
+    padding: 0.6rem 0.9rem;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition:
+      border-color 0.15s,
+      background 0.15s;
+  }
+  .weapon-btn:hover:not(:disabled) {
+    border-color: var(--orange);
+  }
+  .weapon-btn.armed {
+    border-color: var(--orange);
+    background: #241a0c;
+  }
+  .weapon-btn.danger {
+    border-color: #7a2a2a;
+  }
+  .weapon-btn.danger:hover:not(:disabled) {
+    border-color: #ff6b6b;
+    background: #2a1414;
+  }
+  .weapon-btn:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+  .hint {
+    color: var(--dim);
+    font-size: 0.9rem;
+    margin: 0.6rem 0 0;
+    min-height: 1.2em;
+  }
+  .globe-wrap {
+    position: relative;
+    margin-top: 0.5rem;
+  }
+  #globe {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    max-height: 70vh;
+    touch-action: pan-y;
+    cursor: crosshair;
+  }
+  .toasts {
+    position: absolute;
+    left: 50%;
+    bottom: 1rem;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: min(90%, 30rem);
+    pointer-events: none;
+  }
+  .wink {
+    font-size: 0.75rem;
+    color: var(--dim);
+    text-align: center;
+    margin-top: 0.5rem;
+  }
+  .reveal {
+    margin-top: 1.5rem;
+    text-align: center;
+  }
+  .reveal-line {
+    font-size: 1.25rem;
+    color: var(--text);
+    max-width: 34rem;
+    margin: 0 auto 1.25rem;
+  }
+  .footnote {
+    margin-top: 2rem;
+    border-top: 1px solid #1c212b;
+    padding-top: 1rem;
+    color: var(--dim);
+  }
+  .footnote summary {
+    cursor: pointer;
+    color: var(--text);
+  }
+  .footnote p {
+    font-size: 0.9rem;
+    margin: 0.75rem 0 0;
+  }
+</style>
+
+<!-- Toasts are created in JS, so their styles must be global (scoped Astro
+     styles only reach template elements). -->
+<style is:global>
+  #toasts .toast {
+    background: rgba(16, 20, 27, 0.95);
+    border: 1px solid #2a3140;
+    border-left: 3px solid var(--orange);
+    border-radius: 6px;
+    padding: 0.6rem 0.85rem;
+    font-size: 0.9rem;
+    opacity: 0;
+    transform: translateY(8px);
+    transition:
+      opacity 0.35s,
+      transform 0.35s;
+  }
+  #toasts .toast.show {
+    opacity: 1;
+    transform: none;
+  }
+</style>
