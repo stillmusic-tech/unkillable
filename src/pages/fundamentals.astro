@@ -4,50 +4,139 @@ import { CARDS } from '../fundamentals/cards'
 ---
 
 <Base title="Bitcoin Fundamentals">
-  <h1>Bitcoin Fundamentals</h1>
-  <p class="intro">Everything on this site, explained from zero. About two minutes each.</p>
+  <section class="fchapter fhero">
+    <div class="fhero-inner">
+      <h1>Bitcoin Fundamentals</h1>
+      <p class="intro">Everything on this site, explained from zero. About two minutes each.</p>
+      <p class="fhero-hint">Scroll, or pick a chapter →</p>
+    </div>
+  </section>
 
   <div class="ladder">
     {
       CARDS.map((card, i) => (
-        <article class="fcard" id={card.id}>
-          <div class="fcard-head">
-            <span class="fnum">{i + 1}</span>
-            <span class="ficon">{card.icon}</span>
-            <h2>{card.title}</h2>
-          </div>
-          <div class="fvisual" set:html={card.visual} />
-          <p class="fidea">{card.idea}</p>
-          <a class="fattack" href={card.attackHref}>
-            {card.attackLabel}
-          </a>
-        </article>
+        <section class="fchapter">
+          <article class="fcard" id={card.id}>
+            <div class="fcard-head">
+              <span class="fnum">{i + 1}</span>
+              <span class="ficon">{card.icon}</span>
+              <h2>{card.title}</h2>
+            </div>
+            <div class="fvisual" set:html={card.visual} />
+            <p class="fidea">{card.idea}</p>
+            <a class="fattack" href={card.attackHref}>
+              {card.attackLabel}
+            </a>
+          </article>
+        </section>
       ))
     }
   </div>
+
+  <aside id="fund-rail" aria-label="Chapters">
+    {
+      CARDS.map((card, i) => (
+        <button class="rail-item" data-target={card.id}>
+          <span class="rail-num">{i + 1}</span>
+          <span class="rail-title">{card.title}</span>
+        </button>
+      ))
+    }
+  </aside>
 </Base>
 
 <script>
   import { initFundamentals } from '../fundamentals/overlay'
+  import { initRail } from '../fundamentals/rail'
   initFundamentals()
+  initRail()
 </script>
 
 <style>
+  .fchapter {
+    min-height: 100svh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    scroll-snap-align: start;
+    padding: 2rem 1.5rem;
+  }
+  .fhero-inner {
+    text-align: center;
+  }
   .intro {
     font-size: 1.1rem;
     color: var(--text);
-    margin-bottom: 2rem;
   }
-  .ladder {
-    display: grid;
-    gap: 1.25rem;
+  .fhero-hint {
+    margin-top: 2.5rem;
+    color: var(--dim);
+    font-size: 0.9rem;
   }
   .fcard {
+    width: 100%;
+    max-width: 42rem;
     background: var(--panel);
     border: 1px solid #1c212b;
     border-radius: 12px;
     padding: 1.5rem;
-    scroll-margin-top: 5rem;
+  }
+  #fund-rail {
+    position: fixed;
+    right: 1.25rem;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    max-width: 16rem;
+    background: var(--panel);
+    border: 1px solid #1c212b;
+    border-radius: 12px;
+    padding: 0.6rem;
+  }
+  .rail-item {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    background: none;
+    border: none;
+    border-radius: 8px;
+    padding: 0.45rem 0.6rem;
+    color: var(--dim);
+    font-family: inherit;
+    font-size: 0.8rem;
+    text-align: left;
+    cursor: pointer;
+  }
+  .rail-item:hover {
+    color: var(--text);
+    background: #0b0e14;
+  }
+  .rail-num {
+    width: 1.3rem;
+    height: 1.3rem;
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: #0b0e14;
+    border: 1px solid #2a3140;
+    font-size: 0.7rem;
+  }
+  .rail-item.active {
+    color: var(--orange);
+  }
+  .rail-item.active .rail-num {
+    border-color: var(--orange);
+    color: var(--orange);
+  }
+  @media (max-width: 68rem) {
+    #fund-rail {
+      display: none;
+    }
   }
   .fcard-head {
     display: flex;
@@ -92,6 +181,20 @@ import { CARDS } from '../fundamentals/cards'
 </style>
 
 <!-- Card visuals and the overlay are shared/JS-mounted → global styles. -->
+<style is:global>
+  /* One chapter at a time: the page scroll snaps to chapter tops. Scoped to
+     this page via the rail's presence; main's default width/padding give way
+     to the full-height chapters. */
+  html:has(#fund-rail) {
+    scroll-snap-type: y mandatory;
+  }
+  html:has(#fund-rail) main {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+  }
+</style>
+
 <style is:global>
   .fvisual .viz-row,
   #fund-body .viz-row {

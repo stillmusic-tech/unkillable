@@ -213,6 +213,25 @@ test('fundamentals: eight cards in order, each exiting to an attack', async ({ p
   await expect(page.locator('#fund-overlay')).toBeHidden()
 })
 
+test('fundamentals: chapter rail lists all eight and focuses a chapter on click', async ({
+  page,
+}) => {
+  await page.goto('/fundamentals')
+  const items = page.locator('#fund-rail .rail-item')
+  await expect(items).toHaveCount(8)
+  await expect(items.nth(3)).toContainText('What does mining actually do?')
+  // Clicking a chapter scrolls it into focus and the rail highlights it.
+  await items.nth(3).click()
+  await expect(page.locator('#mining')).toBeInViewport({ timeout: 5000 })
+  await expect(items.nth(3)).toHaveClass(/active/, { timeout: 5000 })
+  // Clicking a rail item must NOT set a #hash (a hash opens the overlay).
+  await expect(page).toHaveURL(/\/fundamentals$/)
+  await expect(page.locator('#fund-overlay')).toBeHidden()
+  // Scrolling onward moves the highlight without a click.
+  await page.mouse.wheel(0, 2000)
+  await expect(items.nth(3)).not.toHaveClass(/active/, { timeout: 5000 })
+})
+
 test('fundamentals overlay opens mid-attack without leaving the page', async ({ page }) => {
   await page.goto('/attack/51-percent')
   await page.getByRole('link', { name: /what does mining actually do/i }).click()
