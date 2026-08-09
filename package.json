@@ -11,6 +11,7 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@fontsource/saira": "^5.3.0",
     "@noble/hashes": "^1.8.0",
     "@noble/secp256k1": "^2.3.0",
     "@scure/base": "^1.2.6",
