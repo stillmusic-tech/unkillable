@@ -14,7 +14,7 @@ const routes: Array<[path: string, expectedText: string]> = [
   ['/attack/time', 'Everything dies eventually'],
   ['/attack/quantum', 'a computer that breaks the maths itself'],
   ['/fundamentals', 'explained from zero'],
-  ['/about', 'About'],
+  ['/about', 'The honesty pledge'],
 ]
 
 for (const [path, expectedText] of routes) {
@@ -251,4 +251,59 @@ test('attack 1: the passphrase footnote cracks a weak phrase instantly', async (
   await page.getByRole('button', { name: /^crack it$/i }).click()
   await expect(page.locator('#phrase-address')).toContainText(/^1/)
   await expect(page.locator('#phrase-time')).toContainText(/sha-256|millisecond/i)
+})
+
+// --- Touch pass (Phase 17): every tool usable on a phone-size screen, with no
+// horizontal overflow (the TBF audience's actual arrival device). ---
+test.describe('touch pass — phone viewport', () => {
+  test.use({ viewport: { width: 375, height: 812 }, hasTouch: true, isMobile: true })
+
+  const mobileRoutes = [
+    '/',
+    '/attack',
+    '/attack/hack',
+    '/attack/shut-down',
+    '/attack/51-percent',
+    '/attack/ban',
+    '/attack/print',
+    '/attack/time',
+    '/attack/quantum',
+    '/fundamentals',
+    '/about',
+  ]
+
+  for (const path of mobileRoutes) {
+    test(`${path} fits the phone width — no sideways scroll`, async ({ page }) => {
+      await page.goto(path)
+      // The page body must never be wider than the viewport.
+      const overflow = await page.evaluate(
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      )
+      expect(overflow).toBeLessThanOrEqual(2) // allow sub-pixel rounding
+    })
+  }
+
+  test('a key control is tappable on the hub at phone size', async ({ page }) => {
+    await page.goto('/attack')
+    // Weapon cards are big tap targets and navigate.
+    await page.locator('.weapon').first().tap()
+    await expect(page).toHaveURL(/\/attack\/hack/)
+  })
+
+  test('Attack 1 plays by tap on a phone', async ({ page }) => {
+    await page.goto('/attack/hack')
+    await page.getByRole('button', { name: /flip 256 coins/i }).tap()
+    await expect(page.locator('#key')).toContainText(/^[0-9a-f]{64}$/)
+  })
+
+  test('Attack 3 buys by tap and can reach the win on a phone', async ({ page }) => {
+    await page.goto('/attack/51-percent')
+    const yearBtn = page.getByRole('button', { name: /year of global production/i })
+    const prize = page.locator('#prize')
+    for (let i = 0; i < 4 && !(await prize.isVisible()); i++) {
+      if (!(await yearBtn.isEnabled())) break
+      await yearBtn.tap()
+    }
+    await expect(prize).toBeVisible()
+  })
 })

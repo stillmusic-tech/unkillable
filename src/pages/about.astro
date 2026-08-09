@@ -1,9 +1,129 @@
 ---
 import Base from '../layouts/Base.astro'
+import blocks from '../data/blocks-snapshot.json'
+import nodes from '../data/nodes-snapshot.json'
+import hashrate from '../data/hashrate-snapshot.json'
+import rich from '../data/rich-snapshot.json'
+import weak from '../data/weak-passphrases.json'
+import shop from '../data/mining-shop.json'
+import countries from '../data/mining-by-country.json'
+import china from '../data/china-2021.json'
+import timeline from '../data/timeline-events.json'
+import quantum from '../data/quantum-facts.json'
+
+// The sources list is generated from the datasets themselves, so it can never
+// drift out of sync with what the site actually uses.
+const liveSources = [
+  { name: 'Recent blocks & the ~10-minute heartbeat', detail: 'mempool.space API — live, with a bundled snapshot fallback', date: blocks.retrieved },
+  { name: 'Network mining power (hashrate)', detail: 'mempool.space API — live, with a bundled snapshot fallback', date: hashrate.retrieved },
+  { name: 'Node locations & count', detail: nodes.source, date: nodes.retrieved },
+]
+const bundledSources = [
+  { name: 'Rich-address snapshot (Attack 1)', detail: rich.source, date: rich.retrieved },
+  { name: 'Weak-passphrase list (Attack 1)', detail: weak.source, date: weak.retrieved },
+  { name: 'Mining hardware & country electricity (Attack 3)', detail: shop.source, date: shop.retrieved },
+  { name: 'Mining share by country (Attack 4)', detail: countries.source, date: countries.retrieved },
+  { name: "China's 2021 mining-ban hashrate (Attack 4)", detail: china.source, date: china.retrieved },
+  { name: 'The uptime wall events (Attack 6)', detail: timeline.source, date: timeline.retrieved },
+  { name: 'Quantum qubit counts & migration (Attack 7)', detail: quantum.source, date: quantum.retrieved },
+]
 ---
 
 <Base title="About">
   <h1>About</h1>
-  <p>Why this exists, the honesty pledge, every source with its date, and the small print.</p>
-  <p class="stub">The full page arrives in Phase 16. Until then: no financial advice, no price predictions, no tracking — that part is already true.</p>
+
+  <section class="block">
+    <h2>Why this exists</h2>
+    <p>
+      Confidence in Bitcoin isn't built by being reassured. It's built by attacking it yourself
+      and watching it not break. Every other explainer <em>tells</em> you the network is safe.
+      This one hands you the weapons and lets you try — on real, live data, in the present tense,
+      with the block that was mined while you were reading.
+    </p>
+    <p>
+      It's made by <a href="https://bitcoin-fix.com">The Bitcoin Fix</a>. It explains how the
+      network stays secure. It is not a trading tool and it makes no claims about price.
+    </p>
+  </section>
+
+  <section class="block pledge">
+    <h2>The honesty pledge</h2>
+    <ul>
+      <li>Every number traces to a named source, listed below with its date.</li>
+      <li>Estimates are labelled as estimates, on the page where they appear.</li>
+      <li>We run <em>toward</em> the hard questions — quantum gets its own chapter, and "but exchanges get hacked" is treated as the real, teachable distinction it is.</li>
+      <li>Where Bitcoin has genuinely faltered — the 2010 and 2013 outages — we mark it on the wall, not hide it.</li>
+      <li>No propaganda. If a claim needed spin to survive, it wouldn't belong here.</li>
+    </ul>
+  </section>
+
+  <section class="block">
+    <h2>Live sources</h2>
+    <ul class="sources">
+      {
+        liveSources.map((s) => (
+          <li>
+            <strong>{s.name}</strong> — {s.detail} <span class="date">· as of {s.date}</span>
+          </li>
+        ))
+      }
+    </ul>
+
+    <h2>Bundled datasets</h2>
+    <p class="muted">Each bundled dataset prints its own last-updated date on the page that uses it, too.</p>
+    <ul class="sources">
+      {
+        bundledSources.map((s) => (
+          <li>
+            <strong>{s.name}</strong> — {s.detail} <span class="date">· updated {s.date}</span>
+          </li>
+        ))
+      }
+    </ul>
+  </section>
+
+  <section class="block small-print">
+    <h2>Small print</h2>
+    <ul>
+      <li><strong>No financial advice.</strong> Nothing here is a recommendation to buy, sell or hold anything.</li>
+      <li><strong>No price predictions.</strong> This site is about how the network works, never about what a coin is worth.</li>
+      <li><strong>No accounts, no tracking, no analytics.</strong> Nothing you do here is recorded on any server. Your progress (the FAILED stamps, your report card) lives only in your own browser.</li>
+      <li>Everything runs in your browser. "Attacks" are simulations — no real coins, keys, nodes or blocks are ever touched.</li>
+    </ul>
+  </section>
 </Base>
+
+<style>
+  .block {
+    margin-bottom: 2.5rem;
+  }
+  h2 {
+    font-size: 1.3rem;
+    margin-top: 1.5rem;
+  }
+  p {
+    line-height: 1.65;
+  }
+  .pledge ul,
+  .small-print ul {
+    line-height: 1.7;
+  }
+  .sources {
+    list-style: none;
+    padding: 0;
+  }
+  .sources li {
+    padding: 0.6rem 0;
+    border-bottom: 1px solid #1c212b;
+    font-size: 0.92rem;
+    line-height: 1.5;
+  }
+  .date {
+    color: var(--dim);
+    font-size: 0.82rem;
+  }
+  .muted {
+    color: var(--dim);
+    font-size: 0.88rem;
+  }
+</style>
