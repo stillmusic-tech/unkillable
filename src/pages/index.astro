@@ -22,13 +22,13 @@ import Base from '../layouts/Base.astro'
       <span id="countdown" class="countdown"></span>
     </div>
     <div class="blocks-row">
+      <div id="blocks" class="blocks"></div>
       <!-- The block being assembled right now: fills from the mempool until
-           it's minted and joins the chain to its right. -->
+           it's minted and joins the chain to its left. -->
       <div id="next-block" class="next-block">
         <span class="height">next block</span>
         <span id="next-txs" class="txs">counting…</span>
       </div>
-      <div id="blocks" class="blocks"></div>
     </div>
     <p class="strip-note">
       One new block roughly every 10 minutes — an average, not a schedule. Some arrive in
@@ -258,6 +258,10 @@ import Base from '../layouts/Base.astro'
   }
   .blocks {
     display: flex;
+    /* Newest block sits on the right (we read time left-to-right); the DOM
+       keeps newest-first, row-reverse mirrors it and clips the oldest at the
+       left edge. */
+    flex-direction: row-reverse;
     gap: 1.1rem;
     overflow: hidden;
     flex: 1;
@@ -320,12 +324,12 @@ import Base from '../layouts/Base.astro'
     padding: 0.6rem 0.85rem;
     white-space: nowrap;
   }
-  /* Chain links: each block points at the one it builds on (to its right —
-     newest arrives on the left). */
+  /* Chain links: each block points at the one it builds on (to its left —
+     newest arrives on the right). */
   #blocks .block-tile:not(:last-child)::after {
-    content: '›';
+    content: '‹';
     position: absolute;
-    right: -0.85rem;
+    left: -0.85rem;
     top: 50%;
     transform: translateY(-50%);
     color: rgba(247, 147, 26, 0.5);
@@ -338,7 +342,7 @@ import Base from '../layouts/Base.astro'
   }
   @keyframes block-slide-in {
     from {
-      transform: translateX(-1.5rem);
+      transform: translateX(1.5rem);
       opacity: 0;
     }
     to {
