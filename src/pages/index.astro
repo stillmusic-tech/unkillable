@@ -3,9 +3,10 @@ import Base from '../layouts/Base.astro'
 ---
 
 <Base title="Home">
-  <p>
-    Bitcoin has been hacked, banned, bought, unplugged and declared dead 477 times — in
-    headlines. Here you get the weapons to try it yourself.
+  <p class="hero">
+    Bitcoin has been hacked, banned, bought, unplugged and declared dead
+    <strong class="hero-mark">477 times</strong> — in headlines. Here you get the weapons to try
+    it yourself.
   </p>
 
   <!-- The observatory: the living globe. Drag to spin; nothing to click. -->
@@ -20,7 +21,15 @@ import Base from '../layouts/Base.astro'
       <span id="tap-mode" class="mode">connecting…</span>
       <span id="countdown" class="countdown"></span>
     </div>
-    <div id="blocks" class="blocks"></div>
+    <div class="blocks-row">
+      <!-- The block being assembled right now: fills from the mempool until
+           it's minted and joins the chain to its right. -->
+      <div id="next-block" class="next-block">
+        <span class="height">next block</span>
+        <span id="next-txs" class="txs">counting…</span>
+      </div>
+      <div id="blocks" class="blocks"></div>
+    </div>
     <p class="strip-note">
       One new block roughly every 10 minutes — an average, not a schedule. Some arrive in
       seconds, some take an hour.
@@ -74,9 +83,20 @@ import Base from '../layouts/Base.astro'
   function tile(block: BlockSummary, fresh = false): HTMLElement {
     const el = document.createElement('div')
     el.className = 'block-tile' + (fresh ? ' fresh' : '')
-    el.innerHTML = `<span class="height">#${block.height.toLocaleString('en-GB')}</span><span class="txs">${block.txCount.toLocaleString('en-GB')} payments</span>`
+    const size = block.sizeBytes ? `<span class="size">${(block.sizeBytes / 1e6).toFixed(2)} MB</span>` : ''
+    el.innerHTML = `<span class="height">#${block.height.toLocaleString('en-GB')}</span><span class="txs">${block.txCount.toLocaleString('en-GB')} payments</span>${size}`
     el.title = `Block ${block.height.toLocaleString('en-GB')} — ${block.txCount.toLocaleString('en-GB')} payments`
     return el
+  }
+
+  // The assembling block fills from the mempool: how many payments are queued
+  // waiting to be minted into the next block.
+  const nextTxsEl = document.getElementById('next-txs')!
+  async function refreshMempool() {
+    const result = await tap.mempoolTxCount()
+    const n = result.data.toLocaleString('en-GB')
+    nextTxsEl.textContent =
+      result.mode === 'live' ? `${n} waiting` : `~${n} waiting (${result.dataDate})`
   }
 
   function render(blocks: BlockSummary[]) {
@@ -143,13 +163,30 @@ import Base from '../layouts/Base.astro'
   }
 
   refresh(true)
+  refreshMempool()
   setInterval(tickCountdown, 1000)
   setInterval(() => {
-    if (!snapshotMode) refresh()
+    if (!snapshotMode) {
+      refresh()
+      refreshMempool()
+    }
   }, 30_000)
 </script>
 
 <style>
+  .hero {
+    max-width: 44rem;
+    margin: 0.5rem auto 0;
+    text-align: center;
+    font-size: 1.35rem;
+    line-height: 1.55;
+    color: #fff;
+    letter-spacing: -0.01em;
+  }
+  .hero .hero-mark {
+    color: var(--orange);
+    font-weight: 700;
+  }
   #observatory {
     margin-top: 1.5rem;
     display: flex;
@@ -214,10 +251,52 @@ import Base from '../layouts/Base.astro'
     font-size: 1rem;
     color: var(--text);
   }
+  .blocks-row {
+    display: flex;
+    align-items: stretch;
+    gap: 1.1rem;
+  }
   .blocks {
     display: flex;
-    gap: 0.5rem;
+    gap: 1.1rem;
     overflow: hidden;
+    flex: 1;
+    min-width: 0;
+  }
+  /* The block being assembled: dashed, breathing, waiting to be minted. */
+  .next-block {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    justify-content: center;
+    border: 1px dashed rgba(247, 147, 26, 0.55);
+    border-radius: 6px;
+    padding: 0.6rem 0.85rem;
+    white-space: nowrap;
+    animation: assemble-pulse 2.4s ease-in-out infinite;
+  }
+  .next-block .height {
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--orange);
+  }
+  .next-block .txs {
+    font-family: var(--mono);
+    font-size: 1rem;
+    color: var(--dim);
+  }
+  @keyframes assemble-pulse {
+    0%,
+    100% {
+      box-shadow: 0 0 6px rgba(247, 147, 26, 0.1);
+      border-color: rgba(247, 147, 26, 0.35);
+    }
+    50% {
+      box-shadow: 0 0 16px rgba(247, 147, 26, 0.3);
+      border-color: rgba(247, 147, 26, 0.7);
+    }
   }
   .strip-note {
     margin: 0.75rem 0 0;
@@ -230,15 +309,28 @@ import Base from '../layouts/Base.astro'
      styles only reach elements present in the template). Keyed under #blocks. -->
 <style is:global>
   #blocks .block-tile {
+    position: relative;
     flex: 0 0 auto;
     display: flex;
     flex-direction: column;
     gap: 0.2rem;
     background: var(--well);
-    border: 1px solid #232a37;
+    border: 1px solid var(--line-bright);
     border-radius: 6px;
     padding: 0.6rem 0.85rem;
     white-space: nowrap;
+  }
+  /* Chain links: each block points at the one it builds on (to its right —
+     newest arrives on the left). */
+  #blocks .block-tile:not(:last-child)::after {
+    content: '›';
+    position: absolute;
+    right: -0.85rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: rgba(247, 147, 26, 0.5);
+    font-size: 1.1rem;
+    line-height: 1;
   }
   #blocks .block-tile.fresh {
     animation: block-slide-in 0.6s ease-out;
@@ -260,6 +352,11 @@ import Base from '../layouts/Base.astro'
     font-size: 1rem;
   }
   #blocks .block-tile .txs {
+    font-size: 1rem;
+    color: var(--dim);
+  }
+  #blocks .block-tile .size {
+    font-family: var(--mono);
     font-size: 1rem;
     color: var(--dim);
   }

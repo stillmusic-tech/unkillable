@@ -6,12 +6,14 @@
 import blocksSnapshot from '../data/blocks-snapshot.json'
 import nodesSnapshot from '../data/nodes-snapshot.json'
 import hashrateSnapshot from '../data/hashrate-snapshot.json'
+import mempoolSnapshot from '../data/mempool-snapshot.json'
 
 export interface BlockSummary {
   id: string
   height: number
   timestamp: number // unix seconds
   txCount: number
+  sizeBytes?: number
 }
 
 export interface NodePoint {
@@ -40,6 +42,7 @@ export type FetchLike = (url: string) => Promise<{ ok: boolean; json(): Promise<
 const BLOCKS_URL = 'https://mempool.space/api/v1/blocks'
 const NODES_URL = 'https://bitnodes.io/api/v1/snapshots/latest/?field=coordinates'
 const HASHRATE_URL = 'https://mempool.space/api/v1/mining/hashrate/3d'
+const MEMPOOL_URL = 'https://mempool.space/api/mempool'
 const TIMEOUT_MS = 8000
 const NODE_SAMPLE_CAP = 400
 
@@ -48,6 +51,7 @@ interface RawBlock {
   height: number
   timestamp: number
   tx_count: number
+  size: number
 }
 
 function isoDay(unixSeconds: number): string {
@@ -88,6 +92,18 @@ interface RawNodeSnapshot {
   coordinates: [number, number][]
 }
 
+export function snapshotMempool(): TapResult<number> {
+  return {
+    mode: 'snapshot',
+    dataDate: mempoolSnapshot.retrieved,
+    data: mempoolSnapshot.txCount,
+  }
+}
+
+interface RawMempool {
+  count: number
+}
+
 export function snapshotHashrate(): TapResult<number> {
   return {
     mode: 'snapshot',
@@ -107,6 +123,8 @@ export interface DataTap {
   nodes(): Promise<TapResult<NodeInfo>>
   /** Whole-network mining power in EH/s. Never throws — falls back to snapshot. */
   hashrateEH(): Promise<TapResult<number>>
+  /** How many transactions are waiting in the mempool. Never throws. */
+  mempoolTxCount(): Promise<TapResult<number>>
 }
 
 export function createDataTap(fetchFn?: FetchLike, timeoutMs = TIMEOUT_MS): DataTap {
@@ -123,8 +141,13 @@ export function createDataTap(fetchFn?: FetchLike, timeoutMs = TIMEOUT_MS): Data
           height: b.height,
           timestamp: b.timestamp,
           txCount: b.tx_count,
+          sizeBytes: b.size,
         }))
-        return { mode: 'live' as const, dataDate: isoDay(data[0].timestamp), data }
+        return {
+          mode: 'live' as const,
+          dataDate: isoDay(data[0].timestamp),
+          data,
+        }
       } catch {
         return snapshotBlocks()
       }
@@ -162,11 +185,34 @@ export function createDataTap(fetchFn?: FetchLike, timeoutMs = TIMEOUT_MS): Data
         if (!res.ok) throw new Error('live source not ok')
         const raw = (await res.json()) as RawHashrate
         const hps = raw?.currentHashrate
-        if (typeof hps !== 'number' || !isFinite(hps) || hps <= 0) throw new Error('bad hashrate')
+        if (typeof hps !== 'number' || !isFinite(hps) || hps <= 0)
+          throw new Error('bad hashrate')
         const eh = hps / 1e18
-        return { mode: 'live' as const, dataDate: snapshotHashrate().dataDate, data: eh }
+        return {
+          mode: 'live' as const,
+          dataDate: snapshotHashrate().dataDate,
+          data: eh,
+        }
       } catch {
         return snapshotHashrate()
+      }
+    },
+
+    async mempoolTxCount() {
+      try {
+        const res = await withTimeout(doFetch(MEMPOOL_URL), timeoutMs)
+        if (!res.ok) throw new Error('live source not ok')
+        const raw = (await res.json()) as RawMempool
+        const count = raw?.count
+        if (typeof count !== 'number' || !isFinite(count) || count < 0)
+          throw new Error('bad mempool count')
+        return {
+          mode: 'live' as const,
+          dataDate: snapshotMempool().dataDate,
+          data: count,
+        }
+      } catch {
+        return snapshotMempool()
       }
     },
   }

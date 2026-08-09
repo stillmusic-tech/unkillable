@@ -2,9 +2,12 @@
 // observatory (homepage) and Attack 2 (shut down the server). No WebGL, no
 // three.js: an orthographic projection of real node coordinates onto a 2D
 // canvas, drag-to-spin, with orange glowing nodes and pulsing transaction
-// arcs. Deliberately reusable and killable node-by-node for Attack 2.
+// arcs. Deliberately NOT a library globe (COBE/three.js) — Attack 2 needs
+// per-node kill, tap-to-aim, dark earth and regrowth, which none of them do.
+// Continents render as a dot matrix: landdots.json is a Fibonacci sphere
+// lattice pre-filtered to real land polygons (see its note for provenance).
 
-import coastlines from '../data/coastlines.json'
+import landdots from '../data/landdots.json'
 
 export interface GlobeNode {
   lat: number
@@ -72,13 +75,12 @@ export function createGlobe(
   initialNodes: GlobeNode[],
   options: GlobeOptions = {},
 ): GlobeHandle {
-  const {
-    autoRotateDegPerSec = 6,
-    showTransactions = true,
-    radiusFraction = 0.42,
-  } = options
+  const { autoRotateDegPerSec = 6, showTransactions = true, radiusFraction = 0.42 } = options
 
   const ctx = canvas.getContext('2d')!
+  const landVecs: Vec3[] = (landdots.dots as [number, number][]).map(([lat, lon]) =>
+    latLonToVec3(lat, lon),
+  )
   let nodes: GlobeNode[] = initialNodes.map((n) => ({ alive: true, ...n }))
   let rotationY = 0 // longitude spin, radians
   let tiltX = -0.35 // fixed slight tilt so the northern hemisphere leans in
@@ -167,40 +169,66 @@ export function createGlobe(
 
     ctx.clearRect(0, 0, w, h)
 
-    // Globe disc — faint filled sphere with a soft edge glow.
-    const grad = ctx.createRadialGradient(cx, cy - R * 0.2, R * 0.2, cx, cy, R)
-    grad.addColorStop(0, 'rgba(20,40,70,0.55)')
-    grad.addColorStop(1, 'rgba(8,16,30,0.15)')
+    // Warm bloom behind the sphere, brightest at the rim, so the globe reads
+    // as emitting light into the void rather than floating on flat black.
+    const bloom = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * 1.35)
+    bloom.addColorStop(0, 'rgba(247,147,26,0.05)')
+    bloom.addColorStop(0.72, 'rgba(247,147,26,0.07)')
+    bloom.addColorStop(1, 'rgba(247,147,26,0)')
+    ctx.beginPath()
+    ctx.arc(cx, cy, R * 1.35, 0, Math.PI * 2)
+    ctx.fillStyle = bloom
+    ctx.fill()
+
+    // Globe disc — a dark neutral sphere, lit slightly from the upper left.
+    const grad = ctx.createRadialGradient(cx - R * 0.25, cy - R * 0.35, R * 0.15, cx, cy, R)
+    grad.addColorStop(0, 'rgba(24,30,42,0.9)')
+    grad.addColorStop(1, 'rgba(7,10,16,0.85)')
     ctx.beginPath()
     ctx.arc(cx, cy, R, 0, Math.PI * 2)
     ctx.fillStyle = grad
     ctx.fill()
-    ctx.strokeStyle = 'rgba(70,120,190,0.35)'
-    ctx.lineWidth = 1
-    ctx.stroke()
 
-    // Coastlines — front-facing arcs only.
-    ctx.lineWidth = 1
-    for (const stroke of Object.values(coastlines.strokes) as [number, number][][]) {
+    // Dot-matrix continents — front-facing lattice dots, charcoal-slate,
+    // fading toward the limb. Rotation matrix hoisted out of the loop.
+    const cosYf = Math.cos(rotationY)
+    const sinYf = Math.sin(rotationY)
+    const cosXf = Math.cos(tiltX)
+    const sinXf = Math.sin(tiltX)
+    ctx.fillStyle = 'rgba(132,146,166,0.65)'
+    for (const v of landVecs) {
+      const x1 = v.x * cosYf - v.z * sinYf
+      const z1 = v.x * sinYf + v.z * cosYf
+      const z2 = v.y * sinXf + z1 * cosXf
+      if (z2 < 0.02) continue
+      const y2 = v.y * cosXf - z1 * sinXf
+      const alpha = 0.18 + 0.45 * z2
+      ctx.globalAlpha = alpha
       ctx.beginPath()
-      let penDown = false
-      for (const [lon, lat] of stroke) {
-        const p = project(latLonToVec3(lat, lon))
-        const sx = cx + p.x * R
-        const sy = cy - p.y * R
-        if (p.z >= 0) {
-          if (penDown) ctx.lineTo(sx, sy)
-          else {
-            ctx.moveTo(sx, sy)
-            penDown = true
-          }
-        } else {
-          penDown = false
-        }
-      }
-      ctx.strokeStyle = 'rgba(80,140,210,0.45)'
-      ctx.stroke()
+      ctx.arc(cx + x1 * R, cy - y2 * R, 1.1, 0, Math.PI * 2)
+      ctx.fill()
     }
+    ctx.globalAlpha = 1
+
+    // Fresnel-ish rim: darken toward the edge so the sphere blends into the
+    // background instead of ending in a hard blue line.
+    const rim = ctx.createRadialGradient(cx, cy, R * 0.8, cx, cy, R)
+    rim.addColorStop(0, 'rgba(4,6,10,0)')
+    rim.addColorStop(1, 'rgba(4,6,10,0.75)')
+    ctx.beginPath()
+    ctx.arc(cx, cy, R, 0, Math.PI * 2)
+    ctx.fillStyle = rim
+    ctx.fill()
+
+    // A hair of warm atmosphere right at the limb.
+    ctx.beginPath()
+    ctx.arc(cx, cy, R, 0, Math.PI * 2)
+    ctx.strokeStyle = 'rgba(247,147,26,0.22)'
+    ctx.lineWidth = 1
+    ctx.shadowColor = 'rgba(247,147,26,0.5)'
+    ctx.shadowBlur = 10
+    ctx.stroke()
+    ctx.shadowBlur = 0
 
     // Precompute node screen positions (front hemisphere only).
     const screen: ({ x: number; y: number; z: number } | null)[] = nodes.map((n) => {
@@ -226,22 +254,32 @@ export function createGlobe(
         const e = screen[a.to]
         if (!s || !e) continue
         const prog = (t - a.start) / a.duration
+        // Lift the curve off the surface in proportion to the hop's length so
+        // long arcs arch high and short ones stay low, like flight paths.
+        const chord = Math.hypot(e.x - s.x, e.y - s.y)
+        const lift = Math.min(60, Math.max(16, chord * 0.3))
         const mx = (s.x + e.x) / 2
-        const my = (s.y + e.y) / 2 - 30 // arc lift
+        const my = (s.y + e.y) / 2 - lift
+        const fade = 1 - Math.abs(0.5 - prog) * 2
         ctx.beginPath()
         ctx.moveTo(s.x, s.y)
         ctx.quadraticCurveTo(mx, my, e.x, e.y)
-        ctx.strokeStyle = `rgba(247,147,26,${0.5 * (1 - Math.abs(0.5 - prog) * 2)})`
+        ctx.strokeStyle = `rgba(247,147,26,${0.55 * fade})`
         ctx.lineWidth = 1.2
+        ctx.shadowColor = 'rgba(247,147,26,0.6)'
+        ctx.shadowBlur = 6
         ctx.stroke()
-        // travelling spark
+        // travelling energy pulse along the curve
         const t2 = prog
         const bx = (1 - t2) * (1 - t2) * s.x + 2 * (1 - t2) * t2 * mx + t2 * t2 * e.x
         const by = (1 - t2) * (1 - t2) * s.y + 2 * (1 - t2) * t2 * my + t2 * t2 * e.y
         ctx.beginPath()
-        ctx.arc(bx, by, 1.8, 0, Math.PI * 2)
-        ctx.fillStyle = 'rgba(255,200,120,0.95)'
+        ctx.arc(bx, by, 2, 0, Math.PI * 2)
+        ctx.fillStyle = 'rgba(255,210,140,0.95)'
+        ctx.shadowColor = 'rgba(255,180,80,0.9)'
+        ctx.shadowBlur = 8
         ctx.fill()
+        ctx.shadowBlur = 0
       }
     }
 

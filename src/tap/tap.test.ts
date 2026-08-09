@@ -8,15 +8,33 @@ import snapshot from '../data/blocks-snapshot.json'
 import { createDataTap, type FetchLike } from './tap'
 
 const liveBlocks = [
-  { id: 'abc', height: 970001, timestamp: 1790000600, tx_count: 3210 },
-  { id: 'def', height: 970000, timestamp: 1790000000, tx_count: 2500 },
+  {
+    id: 'abc',
+    height: 970001,
+    timestamp: 1790000600,
+    tx_count: 3210,
+    size: 1_420_000,
+  },
+  {
+    id: 'def',
+    height: 970000,
+    timestamp: 1790000000,
+    tx_count: 2500,
+    size: 1_680_000,
+  },
 ]
 
-const okFetch: FetchLike = async () => ({ ok: true, json: async () => liveBlocks })
+const okFetch: FetchLike = async () => ({
+  ok: true,
+  json: async () => liveBlocks,
+})
 const downFetch: FetchLike = async () => {
   throw new Error('network unreachable')
 }
-const errorFetch: FetchLike = async () => ({ ok: false, json: async () => ({}) })
+const errorFetch: FetchLike = async () => ({
+  ok: false,
+  json: async () => ({}),
+})
 const hangingFetch: FetchLike = () => new Promise(() => {}) // never resolves
 
 describe('data tap — live mode', () => {
@@ -25,8 +43,20 @@ describe('data tap — live mode', () => {
     const result = await tap.recentBlocks()
     expect(result.mode).toBe('live')
     expect(result.data).toEqual([
-      { id: 'abc', height: 970001, timestamp: 1790000600, txCount: 3210 },
-      { id: 'def', height: 970000, timestamp: 1790000000, txCount: 2500 },
+      {
+        id: 'abc',
+        height: 970001,
+        timestamp: 1790000600,
+        txCount: 3210,
+        sizeBytes: 1_420_000,
+      },
+      {
+        id: 'def',
+        height: 970000,
+        timestamp: 1790000000,
+        txCount: 2500,
+        sizeBytes: 1_680_000,
+      },
     ])
     expect(result.dataDate).toBe(new Date(1790000600 * 1000).toISOString().slice(0, 10))
   })
@@ -67,12 +97,36 @@ describe('bundled snapshot sanity', () => {
   })
 })
 
+describe('data tap — mempool', () => {
+  it('passes the live waiting-transaction count through, flagged live', async () => {
+    const mempoolFetch: FetchLike = async () => ({
+      ok: true,
+      json: async () => ({ count: 87515 }),
+    })
+    const tap = createDataTap(mempoolFetch)
+    const result = await tap.mempoolTxCount()
+    expect(result.mode).toBe('live')
+    expect(result.data).toBe(87515)
+  })
+
+  it('falls back to the bundled mempool snapshot when live is down', async () => {
+    const tap = createDataTap(downFetch)
+    const result = await tap.mempoolTxCount()
+    expect(result.mode).toBe('snapshot')
+    expect(result.data).toBeGreaterThan(0)
+    expect(result.dataDate).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+  })
+})
+
 const liveNodes = {
   timestamp: 1790000000,
   total_nodes: 27000,
   coordinates: Array.from({ length: 5000 }, (_, i) => [(i % 170) - 85, (i % 350) - 175]),
 }
-const okNodeFetch: FetchLike = async () => ({ ok: true, json: async () => liveNodes })
+const okNodeFetch: FetchLike = async () => ({
+  ok: true,
+  json: async () => liveNodes,
+})
 
 describe('data tap — nodes', () => {
   it('thins a huge live list to a drawable sample, flagged live', async () => {
