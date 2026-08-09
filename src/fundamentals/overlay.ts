@@ -5,6 +5,7 @@
 // Fundamentals landing page it also opens a card if the URL carries #<id>.
 
 import { cardById, type FundCard } from './cards'
+import { carouselHTML, initCarousel } from './carousel'
 
 let overlayEl: HTMLElement | null = null
 let bodyEl: HTMLElement | null = null
@@ -34,10 +35,9 @@ function ensureOverlay(): HTMLElement {
 
 function renderCard(card: FundCard): string {
   return `
-    <div class="fund-icon">${card.icon}</div>
     <h2 id="fund-title">${card.title}</h2>
-    <div class="fund-visual">${card.visual}</div>
-    <div class="fund-idea">${card.idea}</div>
+    ${card.visual ? `<div class="fund-visual">${card.visual}</div>` : ''}
+    ${carouselHTML(card.slides)}
     <a class="fund-attack" href="${card.attackHref}">${card.attackLabel}</a>`
 }
 
@@ -45,7 +45,11 @@ export function openCard(id: string): void {
   const card = cardById(id)
   if (!card) return
   const el = ensureOverlay()
-  if (bodyEl) bodyEl.innerHTML = renderCard(card)
+  if (bodyEl) {
+    bodyEl.innerHTML = renderCard(card)
+    const carousel = bodyEl.querySelector<HTMLElement>('.fcarousel')
+    if (carousel) initCarousel(carousel)
+  }
   el.hidden = false
   document.body.style.overflow = 'hidden'
 }

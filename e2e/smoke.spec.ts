@@ -213,6 +213,30 @@ test('fundamentals: seven cards in order, each exiting to an attack', async ({ p
   await expect(page.locator('#fund-overlay')).toBeHidden()
 })
 
+test('fundamentals: each chapter is a carousel — one idea at a time', async ({ page }) => {
+  await page.goto('/fundamentals')
+  const carousel = page.locator('.fcard').first().locator('.fcarousel')
+  const slides = carousel.locator('.fc-slide')
+  const dots = carousel.locator('.fc-dot')
+  // Only the first idea shows; you can't go back from it.
+  await expect(slides.first()).toBeVisible()
+  await expect(slides.nth(1)).toBeHidden()
+  await expect(carousel.locator('.fc-prev')).toBeDisabled()
+  await expect(dots.first()).toHaveClass(/is-active/)
+  // The right arrow advances one idea and moves the orange dot.
+  await carousel.locator('.fc-next').click()
+  await expect(slides.nth(1)).toBeVisible()
+  await expect(slides.first()).toBeHidden()
+  await expect(dots.nth(1)).toHaveClass(/is-active/)
+  // A dot jumps straight to its idea; at the end the right arrow stops.
+  await dots.last().click()
+  await expect(slides.last()).toBeVisible()
+  await expect(carousel.locator('.fc-next')).toBeDisabled()
+  // No emoji anywhere in the chapters (design call, 2026-08-09).
+  const text = await page.locator('.ladder').innerText()
+  expect(/\p{Extended_Pictographic}/u.test(text)).toBe(false)
+})
+
 test('fundamentals: chapter rail lists all seven and focuses a chapter on click', async ({
   page,
 }) => {

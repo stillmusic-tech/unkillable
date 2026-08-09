@@ -123,4 +123,153 @@ const current = Astro.url.pathname
     border-radius: 8px;
     text-decoration: none;
   }
+
+  /* ---- Bitcoin Fundamentals shared pieces. The chapter carousel and the
+     mid-attack popup are JS-mounted (innerHTML / set:html) and the popup can
+     open on ANY page, so their styles live here, not in fundamentals.astro. */
+
+  /* Text-only chapter visual (e.g. the big 21,000,000). */
+  .fvisual .viz-row,
+  #fund-body .viz-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #0b0e14;
+    border-radius: 8px;
+    padding: 1rem;
+  }
+  .viz-big {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: var(--orange);
+    letter-spacing: 0.02em;
+  }
+
+  /* One idea at a time: arrows either side, dots along the bottom. */
+  .fcarousel {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 1rem;
+  }
+  .fc-viewport {
+    min-height: 9rem;
+    display: flex;
+    align-items: center;
+  }
+  .fc-slide {
+    display: none;
+    width: 100%;
+    color: var(--text);
+    line-height: 1.6;
+  }
+  .fc-slide.is-active {
+    display: block;
+  }
+  .fc-slide p {
+    margin: 0 0 0.8rem;
+  }
+  .fc-slide p:last-child {
+    margin-bottom: 0;
+  }
+  .fc-slide ul {
+    margin: 0 0 0.8rem;
+    padding-left: 1.2rem;
+  }
+  .fc-slide li {
+    margin-bottom: 0.35rem;
+  }
+  /* The question that hands off to the next chapter. */
+  .fc-slide .fhook {
+    color: var(--orange);
+    font-weight: 600;
+  }
+  .fc-arrow {
+    background: none;
+    border: none;
+    color: var(--dim);
+    font-size: 1.8rem;
+    line-height: 1;
+    padding: 0 0.25rem;
+    cursor: pointer;
+  }
+  .fc-arrow:hover:not(:disabled) {
+    color: var(--orange);
+  }
+  .fc-arrow:disabled {
+    opacity: 0.25;
+    cursor: default;
+  }
+  .fc-dots {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: center;
+    gap: 0.45rem;
+    margin-top: 0.9rem;
+  }
+  .fc-dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    border: none;
+    padding: 0;
+    background: #2a3140;
+    cursor: pointer;
+  }
+  .fc-dot.is-active {
+    background: var(--orange);
+  }
+
+  /* The mid-attack popup. */
+  #fund-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+  #fund-overlay[hidden] {
+    display: none;
+  }
+  #fund-overlay .fund-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(2, 4, 8, 0.8);
+  }
+  #fund-overlay .fund-card {
+    position: relative;
+    z-index: 1;
+    max-width: 32rem;
+    width: 100%;
+    max-height: 88vh;
+    overflow-y: auto;
+    background: var(--panel);
+    border: 1px solid #2a3140;
+    border-radius: 14px;
+    padding: 1.75rem;
+  }
+  #fund-overlay .fund-close {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.9rem;
+    background: none;
+    border: none;
+    color: var(--dim);
+    font-size: 1.1rem;
+    cursor: pointer;
+  }
+  #fund-overlay h2 {
+    margin: 0.25rem 0 1rem;
+    font-size: 1.35rem;
+  }
+  #fund-overlay .fund-attack {
+    display: inline-block;
+    margin-top: 0.75rem;
+    color: var(--orange);
+    font-weight: 600;
+    text-decoration: none;
+  }
 </style>
