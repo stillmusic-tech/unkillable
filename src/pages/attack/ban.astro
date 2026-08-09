@@ -3,7 +3,560 @@ import Base from '../../layouts/Base.astro'
 ---
 
 <Base title="Ban it">
-  <h1>Ban it</h1>
-  <p>Stamp MINING BANNED onto the map, country by country, and watch where the mining goes.</p>
-  <p class="stub">This weapon is being forged — Phase 9. The world map and the China 2021 replay arrive there.</p>
+  <p class="brief">
+    You don't need computers or money. You have parliaments, police and armies. Just make it
+    illegal.
+  </p>
+  <p class="ground">
+    You're banning <strong>Bitcoin mining</strong> — the part a government can actually find:
+    warehouses, power bills, machines. That's why every real ban has aimed there.
+  </p>
+
+  <div class="scoreboard">
+    <div class="sb-item">
+      <span class="sb-label">Bans signed</span>
+      <span class="sb-value"><span id="bans">0</span> / 195</span>
+    </div>
+    <div class="sb-item">
+      <span class="sb-label">Network</span>
+      <span class="sb-value status" id="net-status">OPERATIONAL</span>
+    </div>
+    <div class="sb-item">
+      <span class="sb-label">Mining that found a new home</span>
+      <span class="sb-value" id="surviving">100%</span>
+    </div>
+    <div class="mini-strip">
+      <span class="mini-label">last block</span>
+      <span class="mini-height" id="mini-height">…</span>
+    </div>
+  </div>
+
+  <div class="map-wrap">
+    <canvas id="map-bg" aria-hidden="true"></canvas>
+    <div id="markers" class="markers"></div>
+    <span class="map-date" id="map-date"></span>
+  </div>
+  <div class="map-tools">
+    <button id="ban-all" class="ban-all">☢️ Ban all 195 at once</button>
+    <span class="legend"><span class="dot-banned"></span> already banned or restricted &nbsp;·&nbsp; tap a country to sign a ban</span>
+  </div>
+
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+
+  <!-- China replay showpiece. -->
+  <section class="replay" id="replay" hidden>
+    <h2>China's 2021 mining ban — the biggest ever attempted</h2>
+    <canvas id="china-chart"></canvas>
+    <p class="replay-label" id="replay-label"></p>
+  </section>
+
+  <!-- The turn (all 195 banned). -->
+  <section id="turn" class="turn" hidden>
+    <p class="turn-line">
+      You made it illegal everywhere. You didn't make it stop. A law is an instruction to
+      people — and this network takes instructions from no one. No company to fine, no office
+      to raid, no one to arrest who can turn it off.
+      <a href="/attack/shut-down">No server, remember?</a>
+    </p>
+    <a class="cta" href="/attack/print">Can't beat it from outside? Join it and cheat. →</a>
+  </section>
+
+  <details class="footnote">
+    <summary>So bans do nothing?</summary>
+    <div>
+      <p>
+        Bans <em>do</em> hurt <strong>people</strong>. In a banned country, using Bitcoin
+        carries real legal risk, exchanges close, and adoption slows. China's ban really did
+        push out miners and exchanges — even though the network itself shrugged.
+      </p>
+      <p>
+        <strong>But you can't ban owning it.</strong> Owning Bitcoin is knowing a secret
+        number — twelve words you can memorise. It isn't an object to confiscate or an
+        account to freeze. A border search can't find a number in someone's head. States
+        have tried the nearest thing — the US banned private gold in 1933 and mostly
+        collected it from the honest — but gold has weight and needs vaults; a key doesn't.
+      </p>
+      <p>
+        The genuinely serious version of this attack is the whole world coordinating at once
+        — never achieved for anything comparable, and harder every year as more countries
+        hold Bitcoin themselves. The network survives laws; individual users don't always.
+        That distinction is the honest heart of this page.
+      </p>
+    </div>
+  </details>
 </Base>
+
+<script>
+  import {
+    COUNTRIES,
+    TOTAL_COUNTRIES_WORLD,
+    biggestLegalHost,
+    survivingMiningShare,
+    type Country,
+  } from '../../engines/ban/engine'
+  import { createDataTap } from '../../tap/tap'
+  import { browserStorage, markAttempted } from '../../progress/progress'
+  import coastlines from '../../data/coastlines.json'
+  import chinaData from '../../data/china-2021.json'
+  import countryMeta from '../../data/mining-by-country.json'
+
+  const $ = (id: string) => document.getElementById(id)!
+  const banned = new Set<string>()
+  // Seed with the real historical bans — the attack is already underway.
+  for (const c of COUNTRIES) if (c.banned) banned.add(c.code)
+  let finished = false
+  let replayed = false
+
+  $('map-date').textContent = `mining data: ${countryMeta.source.split('(')[0].trim()} · updated ${countryMeta.retrieved}`
+
+  // --- Flat map background (equirectangular coastlines) --------------------
+  const bg = $('map-bg') as HTMLCanvasElement
+  const bgctx = bg.getContext('2d')!
+  function projectX(lon: number, w: number) {
+    return ((lon + 180) / 360) * w
+  }
+  function projectY(lat: number, h: number) {
+    return ((90 - lat) / 180) * h
+  }
+  function drawMap() {
+    const rect = bg.getBoundingClientRect()
+    const dpr = Math.min(window.devicePixelRatio || 1, 2)
+    bg.width = rect.width * dpr
+    bg.height = rect.height * dpr
+    bgctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    bgctx.clearRect(0, 0, rect.width, rect.height)
+    bgctx.strokeStyle = 'rgba(80,140,210,0.4)'
+    bgctx.lineWidth = 1
+    for (const stroke of Object.values(coastlines.strokes) as [number, number][][]) {
+      bgctx.beginPath()
+      stroke.forEach(([lon, lat], i) => {
+        const x = projectX(lon, rect.width)
+        const y = projectY(lat, rect.height)
+        if (i === 0) bgctx.moveTo(x, y)
+        else bgctx.lineTo(x, y)
+      })
+      bgctx.stroke()
+    }
+  }
+
+  // --- Country markers (HTML buttons over the map) -------------------------
+  const markersEl = $('markers')
+  const markerFor = new Map<string, HTMLButtonElement>()
+  for (const c of COUNTRIES) {
+    const btn = document.createElement('button')
+    btn.className = 'marker'
+    btn.style.left = ((c.lon + 180) / 360) * 100 + '%'
+    btn.style.top = ((90 - c.lat) / 180) * 100 + '%'
+    btn.title = c.name
+    btn.setAttribute('aria-label', c.name)
+    btn.dataset.code = c.code
+    btn.addEventListener('click', () => banCountry(c))
+    markersEl.appendChild(btn)
+    markerFor.set(c.code, btn)
+    if (banned.has(c.code)) btn.classList.add('banned')
+  }
+
+  // --- Scoreboard ----------------------------------------------------------
+  const tap = createDataTap()
+  async function refreshStrip() {
+    const res = await tap.recentBlocks()
+    if (res.data[0]) $('mini-height').textContent = '#' + res.data[0].height.toLocaleString('en-GB')
+  }
+  refreshStrip()
+  setInterval(refreshStrip, 30_000)
+
+  function refreshScore() {
+    $('bans').textContent = String(Math.min(banned.size, TOTAL_COUNTRIES_WORLD))
+    $('surviving').textContent = survivingMiningShare(banned) + '%'
+  }
+  refreshScore()
+
+  // --- Toasts --------------------------------------------------------------
+  function toast(msg: string, ms = 4500, withReplay = false) {
+    const el = document.createElement('div')
+    el.className = 'toast'
+    el.textContent = msg
+    if (withReplay) {
+      const b = document.createElement('button')
+      b.className = 'toast-replay'
+      b.textContent = '▶ Watch it'
+      b.addEventListener('click', () => playChina())
+      el.appendChild(b)
+      el.style.pointerEvents = 'auto'
+    }
+    $('toasts').appendChild(el)
+    setTimeout(() => el.classList.add('show'), 10)
+    setTimeout(() => {
+      el.classList.remove('show')
+      setTimeout(() => el.remove(), 400)
+    }, ms)
+  }
+
+  // --- Banning -------------------------------------------------------------
+  function banCountry(c: Country) {
+    if (finished) return
+    const wasBanned = banned.has(c.code)
+    banned.add(c.code)
+    markerFor.get(c.code)?.classList.add('banned')
+    refreshScore()
+    if (wasBanned && c.banned) {
+      // Re-tapping a pre-banned country still teaches its real story.
+    }
+    react(c)
+  }
+
+  function react(c: Country) {
+    const host = biggestLegalHost(banned)
+    if (c.code === 'CN') {
+      toast('China actually did this in 2021 — the biggest ban ever attempted.', 7000, true)
+    } else if (c.code === 'NG') {
+      toast('Actually happened. Person-to-person Bitcoin trading went up.')
+    } else if (c.code === 'US') {
+      toast('Never been tried. You’d be criminalising ~50 million of your own citizens — and mining would migrate, like 2021.', 6000)
+    } else if (host) {
+      toast(`${banned.size} banned. Mining just migrates — ${host.name} is the new biggest host. Blocks still arriving.`)
+    } else {
+      toast(`${banned.size} banned. Blocks still arriving every 10 minutes.`)
+    }
+  }
+
+  // --- China replay --------------------------------------------------------
+  const chart = $('china-chart') as HTMLCanvasElement
+  function playChina() {
+    replayed = true
+    const replay = $('replay') as HTMLElement
+    replay.hidden = false
+    replay.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    const pts = chinaData.points
+    const ctx = chart.getContext('2d')!
+    const rect = chart.getBoundingClientRect()
+    const dpr = Math.min(window.devicePixelRatio || 1, 2)
+    chart.width = rect.width * dpr
+    chart.height = rect.height * dpr
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    const W = rect.width
+    const H = rect.height
+    const pad = 28
+    const maxEh = Math.max(...pts.map((p) => p.eh)) * 1.1
+    const x = (i: number) => pad + (i / (pts.length - 1)) * (W - pad * 2)
+    const y = (eh: number) => H - pad - (eh / maxEh) * (H - pad * 2)
+
+    const DURATION = 5200
+
+    function drawAt(prog: number) {
+      const shown = prog * (pts.length - 1)
+      ctx.clearRect(0, 0, W, H)
+      // axis baseline
+      ctx.strokeStyle = 'rgba(255,255,255,0.12)'
+      ctx.beginPath()
+      ctx.moveTo(pad, H - pad)
+      ctx.lineTo(W - pad, H - pad)
+      ctx.stroke()
+      // the line up to `shown`
+      ctx.strokeStyle = '#f7931a'
+      ctx.lineWidth = 2.5
+      ctx.beginPath()
+      for (let i = 0; i <= Math.floor(shown); i++) {
+        const px = x(i)
+        const py = y(pts[i].eh)
+        if (i === 0) ctx.moveTo(px, py)
+        else ctx.lineTo(px, py)
+      }
+      const f = shown - Math.floor(shown)
+      if (Math.floor(shown) < pts.length - 1) {
+        const i = Math.floor(shown)
+        const px = x(i) + (x(i + 1) - x(i)) * f
+        const py = y(pts[i].eh) + (y(pts[i + 1].eh) - y(pts[i].eh)) * f
+        ctx.lineTo(px, py)
+      }
+      ctx.stroke()
+      // ban marker
+      const bi = chinaData.banIndex
+      if (shown >= bi) {
+        ctx.fillStyle = '#ff6b6b'
+        ctx.beginPath()
+        ctx.arc(x(bi), y(pts[bi].eh), 4, 0, Math.PI * 2)
+        ctx.fill()
+        ctx.fillStyle = 'rgba(255,107,107,0.9)'
+        ctx.font = '12px system-ui'
+        ctx.fillText('ban signed', x(bi) - 20, y(pts[bi].eh) - 10)
+      }
+      if (prog < 0.5) $('replay-label').textContent = 'Half the world’s mining power goes dark…'
+      else if (prog < 0.85)
+        $('replay-label').textContent = 'Machines physically migrate — to the US, Kazakhstan, Canada…'
+      else
+        $('replay-label').textContent =
+          'Fully recovered within months. The most powerful state on Earth, at full strength — Bitcoin’s records show it as a bad year for miners.'
+    }
+
+    let start = 0
+    function frame(t: number) {
+      if (!start) start = t
+      const prog = Math.min(1, (t - start) / DURATION)
+      drawAt(prog)
+      if (prog < 1) requestAnimationFrame(frame)
+    }
+    drawAt(0)
+    requestAnimationFrame(frame)
+    // Safety net: guarantee the final state even if rAF is throttled (e.g. a
+    // backgrounded tab) so the chart never stalls half-drawn.
+    setTimeout(() => drawAt(1), DURATION + 400)
+  }
+
+  // --- The finale: ban everything ------------------------------------------
+  $('ban-all').addEventListener('click', () => {
+    if (finished) return
+    finished = true
+    for (const c of COUNTRIES) {
+      banned.add(c.code)
+      markerFor.get(c.code)?.classList.add('banned')
+    }
+    banned.add('__rest__')
+    // Force the counter to the whole world.
+    for (let i = 0; i < TOTAL_COUNTRIES_WORLD; i++) banned.add('w' + i)
+    refreshScore()
+    ;($('ban-all') as HTMLButtonElement).disabled = true
+    const turn = $('turn') as HTMLElement
+    turn.hidden = false
+    turn.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    markAttempted(browserStorage(), 'ban')
+  })
+
+  drawMap()
+  window.addEventListener('resize', drawMap)
+</script>
+
+<style>
+  .brief {
+    font-size: 1.2rem;
+    color: var(--text);
+    margin: 0.25rem 0 0.75rem;
+  }
+  .ground {
+    color: var(--dim);
+    font-size: 0.9rem;
+    margin: 0 0 1.25rem;
+  }
+  .scoreboard {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    align-items: center;
+    background: var(--panel);
+    border: 1px solid #1c212b;
+    border-radius: 10px;
+    padding: 0.9rem 1.15rem;
+  }
+  .sb-item {
+    display: flex;
+    flex-direction: column;
+  }
+  .sb-label {
+    font-size: 0.7rem;
+    color: var(--dim);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .sb-value {
+    font-size: 1.35rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .sb-value.status {
+    color: #3fb950;
+    letter-spacing: 0.04em;
+  }
+  .mini-strip {
+    margin-left: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+  }
+  .mini-label {
+    font-size: 0.62rem;
+    color: var(--dim);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .mini-height {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .map-wrap {
+    position: relative;
+    margin-top: 1.25rem;
+    aspect-ratio: 2 / 1;
+    background: #0a0e15;
+    border: 1px solid #1c212b;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  #map-bg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+  .markers {
+    position: absolute;
+    inset: 0;
+  }
+  .map-date {
+    position: absolute;
+    bottom: 0.4rem;
+    right: 0.6rem;
+    font-size: 0.62rem;
+    color: var(--dim);
+  }
+  .map-tools {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 1.25rem;
+    align-items: center;
+    margin-top: 0.75rem;
+  }
+  .ban-all {
+    background: #2a1414;
+    color: var(--text);
+    border: 1px solid #7a2a2a;
+    border-radius: 8px;
+    padding: 0.55rem 0.9rem;
+    cursor: pointer;
+    font-size: 0.9rem;
+  }
+  .ban-all:hover:not(:disabled) {
+    border-color: #ff6b6b;
+  }
+  .ban-all:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+  .legend {
+    font-size: 0.78rem;
+    color: var(--dim);
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .dot-banned {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #ff6b6b;
+  }
+  .replay {
+    margin-top: 1.75rem;
+    background: var(--panel);
+    border: 1px solid #1c212b;
+    border-radius: 10px;
+    padding: 1.25rem;
+  }
+  .replay h2 {
+    margin-top: 0;
+    font-size: 1.15rem;
+  }
+  #china-chart {
+    width: 100%;
+    height: 14rem;
+  }
+  .replay-label {
+    color: var(--text);
+    font-size: 0.95rem;
+    min-height: 2.5em;
+    margin-bottom: 0;
+  }
+  .turn {
+    margin-top: 1.75rem;
+    text-align: center;
+  }
+  .turn-line {
+    font-size: 1.25rem;
+    max-width: 40rem;
+    margin: 0 auto 1.25rem;
+  }
+  .footnote {
+    margin-top: 2rem;
+    border-top: 1px solid #1c212b;
+    padding-top: 1rem;
+    color: var(--dim);
+  }
+  .footnote summary {
+    cursor: pointer;
+    color: var(--text);
+  }
+  .footnote p {
+    font-size: 0.9rem;
+  }
+</style>
+
+<!-- Markers and toasts are JS-built: styles must be global. -->
+<style is:global>
+  #markers .marker {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    width: 12px;
+    height: 12px;
+    padding: 0;
+    border-radius: 50%;
+    border: 1px solid rgba(247, 147, 26, 0.7);
+    background: rgba(247, 147, 26, 0.35);
+    cursor: pointer;
+    transition:
+      background 0.2s,
+      border-color 0.2s,
+      transform 0.1s;
+  }
+  #markers .marker:hover {
+    transform: translate(-50%, -50%) scale(1.4);
+    background: rgba(247, 147, 26, 0.7);
+  }
+  #markers .marker.banned {
+    background: #ff6b6b;
+    border-color: #ff6b6b;
+    box-shadow: 0 0 8px rgba(255, 107, 107, 0.6);
+  }
+  #toasts {
+    position: fixed;
+    left: 50%;
+    bottom: 1.5rem;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: min(92%, 34rem);
+    pointer-events: none;
+    z-index: 20;
+  }
+  #toasts .toast {
+    background: rgba(16, 20, 27, 0.96);
+    border: 1px solid #2a3140;
+    border-left: 3px solid #ff6b6b;
+    border-radius: 6px;
+    padding: 0.6rem 0.85rem;
+    font-size: 0.9rem;
+    opacity: 0;
+    transform: translateY(8px);
+    transition:
+      opacity 0.35s,
+      transform 0.35s;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+  #toasts .toast.show {
+    opacity: 1;
+    transform: none;
+  }
+  #toasts .toast-replay {
+    flex: 0 0 auto;
+    background: var(--orange);
+    color: #0a0a0a;
+    border: none;
+    border-radius: 5px;
+    padding: 0.3rem 0.6rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+</style>

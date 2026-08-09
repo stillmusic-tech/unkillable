@@ -9,7 +9,7 @@ const routes: Array<[path: string, expectedText: string]> = [
   ['/attack/hack', 'Just hack it'],
   ['/attack/shut-down', 'pull the plug'],
   ['/attack/51-percent', 'more mining power than the rest of the world'],
-  ['/attack/ban', 'Ban it'],
+  ['/attack/ban', 'Just make it illegal'],
   ['/attack/print', 'Print more of it'],
   ['/attack/time', "It'll die eventually"],
   ['/attack/quantum', 'Quantum'],
@@ -131,6 +131,22 @@ test('attack 3: buying mining power runs the bill and 51% reveals the prize', as
   await expect(page.locator('#prize')).toContainText(/still cannot/i)
   await expect(page.locator('#prize')).toContainText(/steal a single coin/i)
   await expect(page.locator('#prize-bill')).toContainText(/\$/)
+})
+
+test('attack 4: banning stays OPERATIONAL and ban-all reveals the turn', async ({ page }) => {
+  await page.goto('/attack/ban')
+  await expect(page.locator('#net-status')).toHaveText(/operational/i)
+  // Arrives pre-loaded with real historical bans (China et al).
+  await expect(page.locator('#markers .marker.banned')).not.toHaveCount(0)
+  const bansStart = Number(await page.locator('#bans').textContent())
+  expect(bansStart).toBeGreaterThan(3)
+
+  // Ban everything: the turn shows, status still holds, mining never hits zero.
+  await page.getByRole('button', { name: /ban all 195/i }).click()
+  await expect(page.locator('#turn')).toBeVisible()
+  await expect(page.locator('#turn')).toContainText(/didn't make it stop/i)
+  await expect(page.locator('#net-status')).toHaveText(/operational/i)
+  await expect(page.locator('#bans')).toHaveText('195')
 })
 
 test('attack 1: flipping coins mints a real key and its three addresses', async ({ page }) => {

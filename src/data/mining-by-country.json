@@ -1,0 +1,211 @@
+{
+  "source": "Cambridge Centre for Alternative Finance (CBECI) mining map, Jan 2022 \u2014 the last broad country breakdown; shares shift and some reflect proxy/VPN routing.",
+  "sourceUrl": "https://ccaf.io/cbnsi/cbeci/mining_map",
+  "banSource": "Ban status compiled from national regulations; 'banned' spans outright bans to heavy restrictions \u2014 a deliberately conservative, honest reading.",
+  "retrieved": "2026-08-09",
+  "totalCountriesWorld": 195,
+  "restOfWorldShare": 5.0,
+  "countries": [
+    {
+      "code": "US",
+      "name": "United States",
+      "share": 37.8,
+      "lat": 39,
+      "lon": -98,
+      "banned": false
+    },
+    {
+      "code": "CN",
+      "name": "China",
+      "share": 21.1,
+      "lat": 35,
+      "lon": 103,
+      "banned": true,
+      "note": "Full mining ban, mid-2021 \u2014 the biggest ever attempted."
+    },
+    {
+      "code": "KZ",
+      "name": "Kazakhstan",
+      "share": 13.2,
+      "lat": 48,
+      "lon": 67,
+      "banned": false
+    },
+    {
+      "code": "CA",
+      "name": "Canada",
+      "share": 6.5,
+      "lat": 56,
+      "lon": -106,
+      "banned": false
+    },
+    {
+      "code": "RU",
+      "name": "Russia",
+      "share": 4.7,
+      "lat": 61,
+      "lon": 90,
+      "banned": false
+    },
+    {
+      "code": "DE",
+      "name": "Germany",
+      "share": 3.1,
+      "lat": 51,
+      "lon": 10,
+      "banned": false
+    },
+    {
+      "code": "MY",
+      "name": "Malaysia",
+      "share": 2.5,
+      "lat": 4,
+      "lon": 102,
+      "banned": false
+    },
+    {
+      "code": "IE",
+      "name": "Ireland",
+      "share": 2.0,
+      "lat": 53,
+      "lon": -8,
+      "banned": false
+    },
+    {
+      "code": "IR",
+      "name": "Iran",
+      "share": 0.1,
+      "lat": 32,
+      "lon": 53,
+      "banned": true,
+      "note": "Unlicensed mining banned; licensed mining restricted."
+    },
+    {
+      "code": "GB",
+      "name": "United Kingdom",
+      "share": 0.2,
+      "lat": 54,
+      "lon": -2,
+      "banned": false
+    },
+    {
+      "code": "NO",
+      "name": "Norway",
+      "share": 0.5,
+      "lat": 61,
+      "lon": 9,
+      "banned": false
+    },
+    {
+      "code": "TH",
+      "name": "Thailand",
+      "share": 0.9,
+      "lat": 15,
+      "lon": 101,
+      "banned": false
+    },
+    {
+      "code": "NG",
+      "name": "Nigeria",
+      "share": 0.3,
+      "lat": 9,
+      "lon": 8,
+      "banned": true,
+      "note": "2021 banking ban on crypto; person-to-person trading rose. Softened 2023."
+    },
+    {
+      "code": "IN",
+      "name": "India",
+      "share": 0.9,
+      "lat": 22,
+      "lon": 79,
+      "banned": false
+    },
+    {
+      "code": "BR",
+      "name": "Brazil",
+      "share": 0.4,
+      "lat": -10,
+      "lon": -52,
+      "banned": false
+    },
+    {
+      "code": "AR",
+      "name": "Argentina",
+      "share": 0.3,
+      "lat": -38,
+      "lon": -63,
+      "banned": false
+    },
+    {
+      "code": "AU",
+      "name": "Australia",
+      "share": 0.3,
+      "lat": -25,
+      "lon": 134,
+      "banned": false
+    },
+    {
+      "code": "ZA",
+      "name": "South Africa",
+      "share": 0.2,
+      "lat": -29,
+      "lon": 24,
+      "banned": false
+    },
+    {
+      "code": "DZ",
+      "name": "Algeria",
+      "share": 0.0,
+      "lat": 28,
+      "lon": 2,
+      "banned": true,
+      "note": "Owning or using cryptocurrency is illegal."
+    },
+    {
+      "code": "BD",
+      "name": "Bangladesh",
+      "share": 0.0,
+      "lat": 24,
+      "lon": 90,
+      "banned": true,
+      "note": "Crypto trading banned."
+    },
+    {
+      "code": "EG",
+      "name": "Egypt",
+      "share": 0.0,
+      "lat": 26,
+      "lon": 30,
+      "banned": true,
+      "note": "Religious ruling + banking restrictions."
+    },
+    {
+      "code": "BO",
+      "name": "Bolivia",
+      "share": 0.0,
+      "lat": -17,
+      "lon": -64,
+      "banned": true,
+      "note": "Central bank ban (lifted 2024)."
+    },
+    {
+      "code": "NP",
+      "name": "Nepal",
+      "share": 0.0,
+      "lat": 28,
+      "lon": 84,
+      "banned": true,
+      "note": "Crypto transactions illegal."
+    },
+    {
+      "code": "MA",
+      "name": "Morocco",
+      "share": 0.0,
+      "lat": 32,
+      "lon": -6,
+      "banned": true,
+      "note": "Banned 2017; regulation drafted since."
+    }
+  ]
+}

@@ -1,0 +1,61 @@
+{
+  "source": "Network hashrate history (monthly, EH/s) around China's 2021 mining ban \u2014 shape from public hashrate records.",
+  "sourceUrl": "https://www.blockchain.com/explorer/charts/hash-rate",
+  "retrieved": "2026-08-09",
+  "unit": "EH/s",
+  "points": [
+    {
+      "m": "Jan 2021",
+      "eh": 150
+    },
+    {
+      "m": "Feb",
+      "eh": 160
+    },
+    {
+      "m": "Mar",
+      "eh": 170
+    },
+    {
+      "m": "Apr",
+      "eh": 175
+    },
+    {
+      "m": "May",
+      "eh": 180
+    },
+    {
+      "m": "Jun",
+      "eh": 125
+    },
+    {
+      "m": "Jul",
+      "eh": 90
+    },
+    {
+      "m": "Aug",
+      "eh": 110
+    },
+    {
+      "m": "Sep",
+      "eh": 130
+    },
+    {
+      "m": "Oct",
+      "eh": 150
+    },
+    {
+      "m": "Nov",
+      "eh": 165
+    },
+    {
+      "m": "Dec 2021",
+      "eh": 175
+    },
+    {
+      "m": "Feb 2022",
+      "eh": 200
+    }
+  ],
+  "banIndex": 5
+}
