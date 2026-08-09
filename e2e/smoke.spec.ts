@@ -200,11 +200,10 @@ test('attack 7: aiming answers honestly, verdict is pending, report card renders
   await expect(page.locator('#card-body')).toContainText(/Guess the key/i)
 })
 
-test('fundamentals: seven cards in order, each exiting to an attack', async ({ page }) => {
+test('fundamentals: seven cards in order, deep-link opens the overlay', async ({ page }) => {
   await page.goto('/fundamentals')
   await expect(page.locator('.fcard')).toHaveCount(7)
   await expect(page.locator('.fcard').first()).toContainText('What is Bitcoin')
-  await expect(page.locator('.fcard').first().locator('.fattack')).toBeVisible()
   // Deep-link opens a specific card as an overlay.
   await page.goto('/fundamentals#node')
   await expect(page.locator('#fund-overlay')).toBeVisible()

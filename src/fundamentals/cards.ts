@@ -13,9 +13,6 @@ export interface FundCard {
   slides: string[]
   /** Optional text-only visual above the carousel (HTML string, no emoji). */
   visual?: string
-  /** Where "See it attacked →" leads, and its label. */
-  attackHref: string
-  attackLabel: string
 }
 
 export const CARDS: FundCard[] = [
@@ -34,8 +31,6 @@ export const CARDS: FundCard[] = [
       `<p>Bitcoin is the first time that digital scarcity is possible, and the first ever asset with an absolute limit. There will only ever be 21 Million Bitcoin.</p>`,
       `<p class="fhook">How does it achieve this?</p>`,
     ],
-    attackHref: '/attack',
-    attackLabel: 'Try to kill it →',
   },
   {
     id: 'node',
@@ -50,8 +45,6 @@ export const CARDS: FundCard[] = [
       `<p>Anyone in the world can download and run a node, on an ordinary computer. This is why we call bitcoin 'decentralised'.</p>`,
       `<p class="fhook">So who gets to create blocks, and write in the ledger?</p>`,
     ],
-    attackHref: '/attack/shut-down',
-    attackLabel: 'Try to switch it off →',
   },
   {
     id: 'block',
@@ -63,8 +56,6 @@ export const CARDS: FundCard[] = [
       `<p>To cheat the system and change the record on an old block, you'd have to re-write every single block that follows in the chain (which costs a lot of energy and compute), all while the whole world watches you try and cheat.</p>`,
       `<p class="fhook">Who writes new blocks?</p>`,
     ],
-    attackHref: '/attack/time',
-    attackLabel: 'See the whole chain →',
   },
   {
     id: 'mining',
@@ -78,8 +69,6 @@ export const CARDS: FundCard[] = [
 <p>Nope. The difficulty adjusts.</p>`,
       `<p>The more computers join, the harder it gets. If computers leave, it gets easier. One new block is created every 10 minutes, no matter how much compute (hashpower) is in the network.</p>`,
     ],
-    attackHref: '/attack/51-percent',
-    attackLabel: 'Try to win the race →',
   },
   {
     id: 'energy',
@@ -92,8 +81,6 @@ export const CARDS: FundCard[] = [
 <p>Rewriting blocks means out-spending every miner on Earth, non-stop, forever. In both energy, and compute power.</p>`,
       `<p>Energy is a physical wall protecting the digital notebook. Protecting Bitcoin's scarcity. Protecting its value.</p>`,
     ],
-    attackHref: '/attack/51-percent',
-    attackLabel: 'Try to out-spend the world →',
   },
   {
     id: 'cap',
@@ -110,8 +97,6 @@ export const CARDS: FundCard[] = [
       `<p class="fhook">So if no bank holds your bitcoin, how do you own it?</p>`,
     ],
     visual: '<div class="viz-row"><span class="viz-big">21,000,000</span></div>',
-    attackHref: '/attack/print',
-    attackLabel: 'Try to print more →',
   },
   {
     id: 'key',
@@ -126,8 +111,6 @@ export const CARDS: FundCard[] = [
 <p>This has never been possible before in human history.</p>`,
       `<p>Remember. Not your keys, not your coins.</p>`,
     ],
-    attackHref: '/attack/hack',
-    attackLabel: 'Try to guess a key →',
   },
 ]
 

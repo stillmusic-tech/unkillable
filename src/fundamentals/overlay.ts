@@ -37,8 +37,7 @@ function renderCard(card: FundCard): string {
   return `
     <h2 id="fund-title">${card.title}</h2>
     ${card.visual ? `<div class="fund-visual">${card.visual}</div>` : ''}
-    ${carouselHTML(card.slides)}
-    <a class="fund-attack" href="${card.attackHref}">${card.attackLabel}</a>`
+    ${carouselHTML(card.slides)}`
 }
 
 export function openCard(id: string): void {

@@ -16,9 +16,6 @@ import { carouselHTML } from '../fundamentals/carousel'
             </div>
             {card.visual && <div class="fvisual" set:html={card.visual} />}
             <div class="fbody" set:html={carouselHTML(card.slides)} />
-            <a class="fattack" href={card.attackHref}>
-              {card.attackLabel}
-            </a>
           </article>
         </section>
       ))
@@ -88,7 +85,7 @@ import { carouselHTML } from '../fundamentals/carousel'
     padding: 0.45rem 0.6rem;
     color: var(--dim);
     font-family: inherit;
-    font-size: 0.8rem;
+    font-size: 1rem;
     text-align: left;
     cursor: pointer;
   }
@@ -106,7 +103,7 @@ import { carouselHTML } from '../fundamentals/carousel'
     border-radius: 50%;
     background: #0b0e14;
     border: 1px solid #2a3140;
-    font-size: 0.7rem;
+    font-size: 1rem;
   }
   .rail-item.active {
     color: var(--orange);
@@ -136,22 +133,12 @@ import { carouselHTML } from '../fundamentals/carousel'
     border-radius: 50%;
     background: #0b0e14;
     border: 1px solid #2a3140;
-    font-size: 0.85rem;
+    font-size: 1rem;
     color: var(--dim);
   }
   .fcard-head h2 {
-    font-size: 1.2rem;
+    font-size: 1.25rem;
     margin: 0;
-  }
-  .fattack {
-    display: inline-block;
-    margin-top: 0.75rem;
-    color: var(--orange);
-    font-weight: 600;
-    text-decoration: none;
-  }
-  .fattack:hover {
-    text-decoration: underline;
   }
 </style>
 
