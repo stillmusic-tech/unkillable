@@ -68,6 +68,7 @@ const current = Astro.url.pathname
   nav {
     display: flex;
     flex-wrap: wrap;
+    justify-content: center;
     gap: 1.5rem;
     padding: 1rem 1.5rem;
     border-bottom: 1px solid #1c212b;
@@ -78,9 +79,11 @@ const current = Astro.url.pathname
     font-size: 0.95rem;
     letter-spacing: 0.02em;
   }
-  nav a:hover,
-  nav a[aria-current='page'] {
+  nav a:hover {
     color: var(--text);
+  }
+  nav a[aria-current='page'] {
+    color: var(--orange);
   }
   main {
     max-width: 60rem;
