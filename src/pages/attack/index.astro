@@ -1,30 +1,175 @@
 ---
 import Base from '../../layouts/Base.astro'
 
+// Seven weapons on a rack, escalating-attacker order (Attack Hub spec, locked).
+// Each: icon + the doubt in the visitor's voice + who they'd be + one live
+// "scar" — a real number proving the weapon's already been fired and failed.
 const weapons = [
-  { href: '/attack/hack', doubt: 'Just hack it', role: 'a hacker' },
-  { href: '/attack/shut-down', doubt: 'Shut down the server', role: 'a saboteur' },
-  { href: '/attack/51-percent', doubt: 'The 51% attack', role: 'a billionaire' },
-  { href: '/attack/ban', doubt: 'Ban it', role: 'a nation-state' },
-  { href: '/attack/print', doubt: 'Print more of it', role: 'an insider' },
-  { href: '/attack/time', doubt: "It'll die eventually", role: 'time itself' },
-  { href: '/attack/quantum', doubt: 'Quantum', role: 'the future' },
+  {
+    id: 'hack',
+    href: '/attack/hack',
+    icon: '🔑',
+    doubt: 'Just hack it',
+    role: 'the hacker',
+    scar: '0 keys ever guessed',
+  },
+  {
+    id: 'shut-down',
+    href: '/attack/shut-down',
+    icon: '🔌',
+    doubt: 'Shut down the server',
+    role: 'the saboteur',
+    scar: '27,000+ nodes to find',
+  },
+  {
+    id: '51-percent',
+    href: '/attack/51-percent',
+    icon: '💰',
+    doubt: 'Buy the network',
+    role: 'the billionaire',
+    scar: 'Tens of $B to buy in',
+  },
+  {
+    id: 'ban',
+    href: '/attack/ban',
+    icon: '🚫',
+    doubt: 'Make it illegal',
+    role: 'the president',
+    scar: 'China tried, 2021',
+  },
+  {
+    id: 'print',
+    href: '/attack/print',
+    icon: '🖨️',
+    doubt: 'Print more of it',
+    role: 'the counterfeiter',
+    scar: '21,000,000. Still.',
+  },
+  {
+    id: 'time',
+    href: '/attack/time',
+    icon: '⏳',
+    doubt: 'Just wait',
+    role: 'time itself',
+    scar: '477 obituaries survived',
+  },
+  {
+    id: 'quantum',
+    href: '/attack/quantum',
+    icon: '⚛️',
+    doubt: 'Break the maths',
+    role: 'the future',
+    scar: 'Pending.',
+  },
 ]
 ---
 
 <Base title="Attack the Network">
-  <h1>Attack the Network</h1>
-  <p>Seven famous ways to kill Bitcoin. Pick the one you already believe would work.</p>
-  <ul>
+  <p class="hook">
+    Running every ~10 minutes since January 3rd, 2009, with no days off. Think you can stop
+    it?
+  </p>
+
+  <div class="rack">
     {
       weapons.map((w) => (
-        <li>
-          <a href={w.href}>{w.doubt}</a> — you'd be {w.role}
-        </li>
+        <a class="weapon" href={w.href} data-attack={w.id}>
+          <span class="stamp" data-stamp={w.id} hidden>
+            {w.id === 'quantum' ? '⏳ PENDING' : '❌ FAILED'}
+          </span>
+          <span class="icon">{w.icon}</span>
+          <span class="doubt">“{w.doubt}”</span>
+          <span class="role">you'd be {w.role}</span>
+          <span class="scar">{w.scar}</span>
+        </a>
       ))
     }
-  </ul>
-  <p class="stub">
-    The full armoury — weapon cards, live scars, FAILED stamps — arrives in Phase 6.
-  </p>
+  </div>
 </Base>
+
+<script>
+  import { browserStorage, loadProgress, verdictFor, type AttackId } from '../../progress/progress'
+
+  // Stamp every card the visitor has already run — the hub doubles as their
+  // campaign map. FAILED for the six, PENDING for quantum.
+  const record = loadProgress(browserStorage())
+  document.querySelectorAll<HTMLElement>('[data-stamp]').forEach((el) => {
+    const id = el.dataset.stamp as AttackId
+    const verdict = verdictFor(record, id)
+    if (verdict) {
+      el.hidden = false
+      el.closest('.weapon')?.classList.add('attempted', verdict)
+    }
+  })
+</script>
+
+<style>
+  .hook {
+    font-size: 1.15rem;
+    color: var(--text);
+    max-width: 40rem;
+    margin: 0.5rem 0 2rem;
+  }
+  .rack {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+    gap: 1rem;
+  }
+  .weapon {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    background: var(--panel);
+    border: 1px solid #232a37;
+    border-radius: 10px;
+    padding: 1.25rem;
+    text-decoration: none;
+    color: var(--text);
+    transition:
+      border-color 0.15s,
+      transform 0.15s;
+  }
+  .weapon:hover {
+    border-color: var(--orange);
+    transform: translateY(-2px);
+  }
+  .icon {
+    font-size: 1.8rem;
+    line-height: 1;
+  }
+  .doubt {
+    font-size: 1.2rem;
+    font-weight: 700;
+  }
+  .role {
+    font-size: 0.85rem;
+    color: var(--dim);
+  }
+  .scar {
+    margin-top: 0.5rem;
+    font-size: 0.8rem;
+    color: var(--orange);
+    letter-spacing: 0.02em;
+  }
+  .stamp {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: #ff6b6b;
+    border: 1.5px solid #ff6b6b;
+    border-radius: 5px;
+    padding: 0.1rem 0.4rem;
+    transform: rotate(6deg);
+  }
+  .weapon.pending .stamp {
+    color: var(--dim);
+    border-color: var(--dim);
+  }
+  .weapon.attempted {
+    opacity: 0.92;
+  }
+</style>

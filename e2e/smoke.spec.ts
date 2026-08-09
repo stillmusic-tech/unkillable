@@ -5,7 +5,7 @@ import { expect, test } from '@playwright/test'
 
 const routes: Array<[path: string, expectedText: string]> = [
   ['/', 'UNKILLABLE'],
-  ['/attack', 'Attack the Network'],
+  ['/attack', 'Think you can stop it'],
   ['/attack/hack', 'Just hack it'],
   ['/attack/shut-down', 'Shut down the server'],
   ['/attack/51-percent', 'The 51% attack'],
@@ -48,6 +48,39 @@ test('homepage: the observatory globe renders with a dated node count', async ({
     .toBeGreaterThan(0)
   await expect(page.locator('#node-count')).toContainText(/reachable nodes worldwide/i)
   await expect(page.locator('#node-count')).toContainText(/drag to spin/i)
+})
+
+test('armoury: seven weapon cards with doubts, roles, and live scars', async ({ page }) => {
+  await page.goto('/attack')
+  const cards = page.locator('.weapon')
+  await expect(cards).toHaveCount(7)
+  await expect(cards.first()).toContainText('Just hack it')
+  await expect(cards.first()).toContainText(/hacker/i)
+  await expect(cards.first()).toContainText(/0 keys ever guessed/i)
+  await expect(page.locator('.weapon[data-attack="quantum"] .scar')).toContainText(/pending/i)
+})
+
+test('armoury: running Attack 1 stamps its card FAILED and it survives a reload', async ({
+  page,
+}) => {
+  // No stamp before playing.
+  await page.goto('/attack')
+  await expect(page.locator('.weapon[data-attack="hack"] .stamp')).toBeHidden()
+
+  // Play Attack 1 to its turn.
+  await page.goto('/attack/hack')
+  await page.getByRole('button', { name: /start cracking/i }).click()
+  await expect(page.locator('#tried')).toHaveText(/[1-9]/, { timeout: 5000 })
+  await page.getByRole('button', { name: /stop and see the damage/i }).click()
+  await expect(page.locator('#turn')).toBeVisible()
+
+  // The hub now shows the FAILED stamp — and it persists across a reload
+  // (localStorage-backed, the browser-restart proxy).
+  await page.goto('/attack')
+  await expect(page.locator('.weapon[data-attack="hack"] .stamp')).toBeVisible()
+  await expect(page.locator('.weapon[data-attack="hack"] .stamp')).toContainText(/failed/i)
+  await page.reload()
+  await expect(page.locator('.weapon[data-attack="hack"] .stamp')).toBeVisible()
 })
 
 test('attack 1: flipping coins mints a real key and its three addresses', async ({ page }) => {

@@ -194,6 +194,7 @@ const richTotal = Math.round(snapshot.entries.reduce((sum, e) => sum + e.btc, 0)
   } from '../../engines/hack/cracker'
   import snapshotJson from '../../data/rich-snapshot.json'
   import weakJson from '../../data/weak-passphrases.json'
+  import { browserStorage, markAttempted } from '../../progress/progress'
 
   const snapshot = snapshotJson as RichSnapshot
   const $ = (id: string) => document.getElementById(id)!
@@ -295,6 +296,8 @@ const richTotal = Math.round(snapshot.entries.reduce((sum, e) => sum + e.btc, 0)
     $('turn-verdict').textContent = hit
       ? `IMPOSSIBLE-ODDS HIT: one of your ${tried.toLocaleString()} keys opened “${hit.label}”. You are the luckiest being in the history of the universe.`
       : `You tried ${tried.toLocaleString()} real keys. Matches against ${snapshot.entries.length.toLocaleString()} funded wallets: ZERO. Nothing to steal.`
+    // Stamp the campaign: this attack was run, and the network held.
+    markAttempted(browserStorage(), 'hack')
     turn.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
