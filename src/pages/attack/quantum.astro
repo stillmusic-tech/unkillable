@@ -3,7 +3,499 @@ import Base from '../../layouts/Base.astro'
 ---
 
 <Base title="Quantum">
-  <h1>Quantum</h1>
-  <p>Aim the scariest weapon of all — and get an honest answer instead of spin.</p>
-  <p class="stub">This weapon is being forged — Phase 13. The targeting scope, the race chart and the no-spin verdict arrive there.</p>
+  <p class="brief">
+    Every attack so far used today's weapons. Yours is from the future: a computer that breaks
+    the maths itself. This is the one page where we can't show you the attack failing.
+  </p>
+
+  <div class="scoreboard">
+    <div class="sb-item">
+      <span class="sb-label">Qubits today</span>
+      <span class="sb-value" id="qubits-today">…</span>
+    </div>
+    <div class="sb-item">
+      <span class="sb-label">Qubits needed</span>
+      <span class="sb-value" id="qubits-needed">…</span>
+    </div>
+    <div class="sb-item">
+      <span class="sb-label">Network</span>
+      <span class="sb-value status">OPERATIONAL <span class="today">…today</span></span>
+    </div>
+  </div>
+  <p class="qlabel">
+    A qubit is a quantum computer's working part; “noisy” ones make errors, and today's
+    machines are mostly noise.
+  </p>
+
+  <!-- The targeting scope. -->
+  <p class="aim-hint">Aim the weapon — what does quantum actually do to each part of Bitcoin?</p>
+  <div class="targets" id="targets" role="group" aria-label="Targeting scope"></div>
+  <div class="reaction" id="reaction" hidden></div>
+
+  <!-- The race. -->
+  <section class="race">
+    <h2>The race: the weapon vs the shield</h2>
+    <canvas id="race-chart" aria-label="Quantum machines versus quantum-proof migration"></canvas>
+    <div class="race-legend">
+      <span class="leg weapon" id="weapon-label"></span>
+      <span class="leg shield" id="shield-label"></span>
+    </div>
+    <p class="race-note">
+      This isn't Bitcoin's private problem. The same maths guards every bank, government and
+      military secret on Earth. When the migration comes, Bitcoin migrates alongside the whole
+      internet — with an upgrade process that has a proven record the internet's doesn't.
+    </p>
+  </section>
+
+  <!-- The verdict — no spin. -->
+  <section class="verdict" id="verdict"></section>
+
+  <details class="footnote">
+    <summary>What if it arrives early?</summary>
+    <p>
+      Told straight: a sudden breakthrough would mean a messy, rushed migration, and old
+      exposed coins could genuinely be stolen. It would be Bitcoin's hardest test, and nobody
+      serious claims otherwise. But what survives even that scenario is the previous six pages'
+      point — the record book, the nodes, the cap and the rules aren't what quantum threatens.
+      The locks are. And locks can be changed.
+    </p>
+  </details>
+
+  <!-- The finale: the report card. -->
+  <section class="report" id="report">
+    <h2>Your campaign</h2>
+    <table class="card">
+      <tbody id="card-body"></tbody>
+    </table>
+    <div class="report-actions">
+      <button id="share" class="cta-btn">Share your defeat</button>
+      <a class="ghost-btn" href="/">Back to the observatory</a>
+      <a class="ghost-btn" href="/fundamentals">Become one of the lights</a>
+    </div>
+  </section>
+
+  <div id="toasts" class="toasts" aria-live="polite"></div>
 </Base>
+
+<script>
+  import {
+    QUBITS_NEEDED,
+    QUBITS_TODAY,
+    RACE,
+    TARGETS,
+    VERDICT_LINES,
+    targetById,
+  } from '../../engines/quantum/engine'
+  import {
+    ATTACK_IDS,
+    browserStorage,
+    loadProgress,
+    markAttempted,
+    verdictFor,
+    type AttackId,
+  } from '../../progress/progress'
+
+  const $ = (id: string) => document.getElementById(id)!
+  let fired = false
+
+  $('qubits-today').textContent = '~' + QUBITS_TODAY.toLocaleString('en-GB')
+  $('qubits-needed').textContent = QUBITS_NEEDED >= 1e6 ? '~' + QUBITS_NEEDED / 1e6 + ' million' : QUBITS_NEEDED.toLocaleString('en-GB')
+
+  // Targeting scope.
+  const targetsEl = $('targets')
+  for (const t of TARGETS) {
+    const btn = document.createElement('button')
+    btn.className = 'target'
+    btn.dataset.id = t.id
+    btn.innerHTML = `<span class="t-icon">${t.icon}</span><span>${t.label}</span>`
+    btn.addEventListener('click', () => aim(t.id))
+    targetsEl.appendChild(btn)
+  }
+
+  function aim(id: string) {
+    const t = targetById(id)
+    if (!t) return
+    document.querySelectorAll('.target').forEach((b) => b.classList.remove('armed'))
+    document.querySelector(`.target[data-id="${id}"]`)?.classList.add('armed')
+    const box = $('reaction') as HTMLElement
+    box.hidden = false
+    box.className = 'reaction ' + (t.vulnerable ? 'exposed' : 'safe')
+    box.textContent = t.reaction
+    if (!fired) {
+      fired = true
+      markAttempted(browserStorage(), 'quantum')
+      renderCard()
+    }
+  }
+
+  // The race chart.
+  const chart = $('race-chart') as HTMLCanvasElement
+  $('weapon-label').textContent = RACE.weaponLabel
+  $('shield-label').textContent = RACE.shieldLabel
+  function drawRace() {
+    const ctx = chart.getContext('2d')!
+    const rect = chart.getBoundingClientRect()
+    const dpr = Math.min(window.devicePixelRatio || 1, 2)
+    chart.width = rect.width * dpr
+    chart.height = rect.height * dpr
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    const W = rect.width
+    const H = rect.height
+    const pad = 30
+    ctx.clearRect(0, 0, W, H)
+    const years = [...RACE.weapon.map((p) => p.year), ...RACE.shield.map((p) => p.year)]
+    const minY = Math.min(...years)
+    const maxY = Math.max(...years)
+    const x = (yr: number) => pad + ((yr - minY) / (maxY - minY)) * (W - pad * 2)
+    // weapon on a log scale (qubits span orders of magnitude)
+    const maxLog = Math.log10(QUBITS_NEEDED)
+    const wy = (q: number) => H - pad - (Math.log10(Math.max(1, q)) / maxLog) * (H - pad * 2)
+    const sy = (p: number) => H - pad - (p / 100) * (H - pad * 2)
+
+    ctx.strokeStyle = 'rgba(255,255,255,0.1)'
+    ctx.beginPath()
+    ctx.moveTo(pad, H - pad)
+    ctx.lineTo(W - pad, H - pad)
+    ctx.stroke()
+
+    // the "needed" ceiling
+    ctx.strokeStyle = 'rgba(255,107,107,0.4)'
+    ctx.setLineDash([5, 5])
+    ctx.beginPath()
+    ctx.moveTo(pad, wy(QUBITS_NEEDED))
+    ctx.lineTo(W - pad, wy(QUBITS_NEEDED))
+    ctx.stroke()
+    ctx.setLineDash([])
+    ctx.fillStyle = 'rgba(255,107,107,0.8)'
+    ctx.font = '11px system-ui'
+    ctx.textAlign = 'left'
+    ctx.fillText('qubits needed to break a lock', pad + 4, wy(QUBITS_NEEDED) - 6)
+
+    line(ctx, RACE.weapon.map((p) => [x(p.year), wy(p.qubits)]), '#ff6b6b')
+    line(ctx, RACE.shield.map((p) => [x(p.year), sy(p.progress)]), '#3fb950')
+
+    ctx.fillStyle = 'rgba(139,143,152,0.9)'
+    ctx.textAlign = 'center'
+    ctx.fillText(String(minY), pad, H - 8)
+    ctx.fillText(String(maxY), W - pad, H - 8)
+  }
+  function line(ctx: CanvasRenderingContext2D, pts: number[][], color: string) {
+    ctx.strokeStyle = color
+    ctx.lineWidth = 2.5
+    ctx.beginPath()
+    pts.forEach(([px, py], i) => (i ? ctx.lineTo(px, py) : ctx.moveTo(px, py)))
+    ctx.stroke()
+    for (const [px, py] of pts) {
+      ctx.beginPath()
+      ctx.arc(px, py, 3, 0, Math.PI * 2)
+      ctx.fillStyle = color
+      ctx.fill()
+    }
+  }
+
+  // The verdict.
+  $('verdict').innerHTML = VERDICT_LINES.map((l) => `<p>${l}</p>`).join('')
+
+  // The report card.
+  const ROWS: Record<AttackId, [string, string]> = {
+    hack: ['Guess the key', 'the universe died first'],
+    'shut-down': ['Find the server', "there isn't one"],
+    '51-percent': ['Buy the network', 'you became its biggest investor'],
+    ban: ['Outlaw it', 'a superpower already tried'],
+    print: ['Print more', '17,300 bookkeepers said no'],
+    time: ['Wait it out', '477 obituaries and counting'],
+    quantum: ['Quantum', 'watch this space'],
+  }
+  function renderCard() {
+    const record = loadProgress(browserStorage())
+    $('card-body').innerHTML = ATTACK_IDS.map((id) => {
+      const [label, line] = ROWS[id]
+      const v = verdictFor(record, id)
+      let result: string
+      if (!v) result = '<span class="pending muted">— not attempted yet</span>'
+      else if (v === 'pending') result = '<span class="pending">⏳ Pending — ' + line + '</span>'
+      else result = '<span class="failed">❌ Failed — ' + line + '</span>'
+      return `<tr><td class="atk">${label}</td><td>${result}</td></tr>`
+    }).join('')
+  }
+  renderCard()
+
+  // Share your defeat.
+  function toast(msg: string) {
+    const el = document.createElement('div')
+    el.className = 'toast'
+    el.textContent = msg
+    $('toasts').appendChild(el)
+    setTimeout(() => el.classList.add('show'), 10)
+    setTimeout(() => {
+      el.classList.remove('show')
+      setTimeout(() => el.remove(), 400)
+    }, 3500)
+  }
+  $('share').addEventListener('click', async () => {
+    const record = loadProgress(browserStorage())
+    const failed = ATTACK_IDS.filter((id) => verdictFor(record, id) === 'failed').length
+    const text = `I tried to kill Bitcoin ${failed || 6} ways. Score: Bitcoin ${failed || 6}, me 0. Try it: unkillable.bitcoin-fix.com`
+    try {
+      if (navigator.share) {
+        await navigator.share({ text })
+      } else {
+        await navigator.clipboard.writeText(text)
+        toast('Copied to your clipboard.')
+      }
+    } catch {
+      toast('Sharing cancelled.')
+    }
+  })
+
+  drawRace()
+  window.addEventListener('resize', drawRace)
+</script>
+
+<style>
+  .brief {
+    font-size: 1.2rem;
+    color: var(--text);
+    margin: 0.25rem 0 1rem;
+  }
+  .scoreboard {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.75rem;
+    background: var(--panel);
+    border: 1px solid #1c212b;
+    border-radius: 10px;
+    padding: 0.9rem 1.15rem;
+  }
+  .sb-item {
+    display: flex;
+    flex-direction: column;
+  }
+  .sb-label {
+    font-size: 0.7rem;
+    color: var(--dim);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .sb-value {
+    font-size: 1.35rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .sb-value.status {
+    color: #3fb950;
+    letter-spacing: 0.03em;
+  }
+  .today {
+    color: var(--dim);
+    font-weight: 400;
+    font-size: 0.85rem;
+    letter-spacing: 0;
+  }
+  .qlabel {
+    font-size: 0.8rem;
+    color: var(--dim);
+    margin: 0.6rem 0 1.5rem;
+  }
+  .aim-hint {
+    font-size: 1rem;
+    color: var(--text);
+    margin-bottom: 0.75rem;
+  }
+  .targets {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+    gap: 0.75rem;
+  }
+  .reaction {
+    margin-top: 1rem;
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+    font-size: 0.95rem;
+    border: 1px solid #2a3140;
+    border-left: 3px solid var(--dim);
+    background: var(--panel);
+  }
+  .reaction.safe {
+    border-left-color: #3fb950;
+  }
+  .reaction.exposed {
+    border-left-color: #ff6b6b;
+  }
+  .race {
+    margin-top: 2rem;
+  }
+  .race h2 {
+    font-size: 1.15rem;
+  }
+  #race-chart {
+    width: 100%;
+    height: 15rem;
+    display: block;
+  }
+  .race-legend {
+    display: flex;
+    gap: 1.5rem;
+    margin-top: 0.5rem;
+    font-size: 0.82rem;
+    flex-wrap: wrap;
+  }
+  .leg::before {
+    content: '';
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    margin-right: 0.4rem;
+    vertical-align: middle;
+  }
+  .leg.weapon::before {
+    background: #ff6b6b;
+  }
+  .leg.shield::before {
+    background: #3fb950;
+  }
+  .race-note {
+    font-size: 0.85rem;
+    color: var(--dim);
+    margin-top: 0.75rem;
+  }
+  .verdict {
+    margin-top: 2rem;
+    background: var(--panel);
+    border: 1px solid var(--orange);
+    border-radius: 12px;
+    padding: 1.5rem;
+    text-align: center;
+  }
+  .verdict p {
+    font-size: 1.15rem;
+    font-weight: 600;
+    margin: 0.5rem 0;
+  }
+  .footnote {
+    margin-top: 2rem;
+    border-top: 1px solid #1c212b;
+    padding-top: 1rem;
+    color: var(--dim);
+  }
+  .footnote summary {
+    cursor: pointer;
+    color: var(--text);
+  }
+  .footnote p {
+    font-size: 0.9rem;
+  }
+  .report {
+    margin-top: 2.5rem;
+    border-top: 2px solid var(--orange);
+    padding-top: 1.5rem;
+  }
+  .card {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .card td {
+    padding: 0.6rem 0.5rem;
+    border-bottom: 1px solid #1c212b;
+    font-size: 0.95rem;
+    vertical-align: top;
+  }
+  .card .atk {
+    font-weight: 700;
+    width: 40%;
+  }
+  .report-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+  }
+  .cta-btn {
+    background: var(--orange);
+    color: #0a0a0a;
+    font-weight: 700;
+    border: none;
+    border-radius: 8px;
+    padding: 0.7rem 1.25rem;
+    cursor: pointer;
+    font-size: 0.95rem;
+  }
+  .ghost-btn {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid #2a3140;
+    border-radius: 8px;
+    padding: 0.7rem 1.25rem;
+    text-decoration: none;
+    font-size: 0.95rem;
+  }
+  .ghost-btn:hover {
+    border-color: var(--orange);
+  }
+</style>
+
+<!-- JS-built elements need global styles. -->
+<style is:global>
+  #targets .target {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+    background: #0f141c;
+    border: 1px solid #2a3140;
+    color: var(--text);
+    border-radius: 10px;
+    padding: 1rem 0.75rem;
+    cursor: pointer;
+    font-size: 0.9rem;
+  }
+  #targets .target:hover {
+    border-color: var(--orange);
+  }
+  #targets .target.armed {
+    border-color: var(--orange);
+    background: #241a0c;
+  }
+  #targets .t-icon {
+    font-size: 1.6rem;
+  }
+  #card-body .failed {
+    color: #ff8080;
+  }
+  #card-body .pending {
+    color: var(--orange);
+  }
+  #card-body .pending.muted {
+    color: var(--dim);
+  }
+  #toasts {
+    position: fixed;
+    left: 50%;
+    bottom: 1.5rem;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: min(90%, 30rem);
+    pointer-events: none;
+    z-index: 20;
+  }
+  #toasts .toast {
+    background: rgba(16, 20, 27, 0.96);
+    border: 1px solid #2a3140;
+    border-left: 3px solid var(--orange);
+    border-radius: 6px;
+    padding: 0.65rem 0.9rem;
+    font-size: 0.9rem;
+    opacity: 0;
+    transform: translateY(8px);
+    transition:
+      opacity 0.35s,
+      transform 0.35s;
+  }
+  #toasts .toast.show {
+    opacity: 1;
+    transform: none;
+  }
+</style>

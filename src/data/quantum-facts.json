@@ -1,0 +1,105 @@
+{
+  "source": "Public quantum-hardware milestones (IBM Condor 1,121 qubits, 2023) and secp256k1 resource estimates; NIST post-quantum standards FIPS 203/204/205 (Aug 2024).",
+  "retrieved": "2026-08-09",
+  "qubitsToday": 1200,
+  "qubitsTodayLabel": "~1,200 noisy",
+  "qubitsNeeded": 5000000,
+  "qubitsNeededLabel": "several million, error-corrected",
+  "largestCracked": "15 and 21 \u2014 smaller than your PIN",
+  "shieldStandardisedYear": 2024,
+  "targets": [
+    {
+      "id": "mining",
+      "icon": "\u26cf\ufe0f",
+      "label": "Mining",
+      "vulnerable": false,
+      "reaction": "Wrong target. Quantum computers barely help with mining's puzzle. The 21,000,000 cap doesn't care."
+    },
+    {
+      "id": "modern",
+      "icon": "\ud83d\udc5b",
+      "label": "A modern wallet",
+      "vulnerable": false,
+      "reaction": "Protected. A modern address keeps its lock's blueprint hidden until the moment its owner spends. Your attack window: minutes, once \u2014 against a machine that doesn't exist yet."
+    },
+    {
+      "id": "old",
+      "icon": "\ud83e\udea6",
+      "label": "An old, exposed wallet",
+      "vulnerable": true,
+      "reaction": "These ARE exposed. Around a million coins sit in early wallets whose lock blueprints are public \u2014 including the untouched fortune of Bitcoin's anonymous creator. This is the canary: if these coins ever move, the world will know quantum has arrived. They'll fall first, and loudest."
+    },
+    {
+      "id": "today",
+      "icon": "\ud83d\udd25",
+      "label": "Fire today",
+      "vulnerable": false,
+      "reaction": "The largest number a real quantum computer has cracked this way is smaller than your PIN. The gap between the lab and this attack is measured in decades of engineering \u2014 but it's a gap, not a wall."
+    }
+  ],
+  "race": {
+    "weapon": [
+      {
+        "year": 2016,
+        "qubits": 5
+      },
+      {
+        "year": 2018,
+        "qubits": 50
+      },
+      {
+        "year": 2019,
+        "qubits": 53
+      },
+      {
+        "year": 2021,
+        "qubits": 127
+      },
+      {
+        "year": 2022,
+        "qubits": 433
+      },
+      {
+        "year": 2023,
+        "qubits": 1121
+      },
+      {
+        "year": 2025,
+        "qubits": 1200
+      }
+    ],
+    "shield": [
+      {
+        "year": 2016,
+        "progress": 5
+      },
+      {
+        "year": 2018,
+        "progress": 15
+      },
+      {
+        "year": 2020,
+        "progress": 30
+      },
+      {
+        "year": 2022,
+        "progress": 55
+      },
+      {
+        "year": 2024,
+        "progress": 85
+      },
+      {
+        "year": 2025,
+        "progress": 90
+      }
+    ],
+    "weaponLabel": "Quantum machines (qubits, log scale)",
+    "shieldLabel": "Quantum-proof migration (% designs ready + deploying)"
+  },
+  "verdict": [
+    "This weapon is real.",
+    "It does not exist yet, and the world is already forging the shield.",
+    "We'll show you this page again when either line moves."
+  ]
+}

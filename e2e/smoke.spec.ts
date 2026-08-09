@@ -12,7 +12,7 @@ const routes: Array<[path: string, expectedText: string]> = [
   ['/attack/ban', 'Just make it illegal'],
   ['/attack/print', 'open it up and give yourself some'],
   ['/attack/time', 'Everything dies eventually'],
-  ['/attack/quantum', 'Quantum'],
+  ['/attack/quantum', 'a computer that breaks the maths itself'],
   ['/fundamentals', 'Bitcoin Fundamentals'],
   ['/about', 'About'],
 ]
@@ -177,6 +177,27 @@ test('attack 6: the wall renders and skip-to-end lands on the present', async ({
   await page.getByRole('button', { name: /skip to the end/i }).click()
   await expect(page.locator('#turn')).toBeVisible({ timeout: 5000 })
   await expect(page.locator('#turn-line')).toContainText(/being built/i)
+})
+
+test('attack 7: aiming answers honestly, verdict is pending, report card renders', async ({
+  page,
+}) => {
+  await page.goto('/attack/quantum')
+  await expect(page.locator('#verdict')).toContainText(/does not exist yet/i)
+
+  // Aim at the old wallet → the one honest "exposed" answer.
+  await page.getByRole('button', { name: /old, exposed wallet/i }).click()
+  await expect(page.locator('#reaction')).toBeVisible()
+  await expect(page.locator('#reaction')).toHaveClass(/exposed/)
+  await expect(page.locator('#reaction')).toContainText(/canary/i)
+
+  // Aim at mining → safe.
+  await page.getByRole('button', { name: /^.*Mining$/i }).click()
+  await expect(page.locator('#reaction')).toHaveClass(/safe/)
+
+  // The report card shows quantum as pending after aiming.
+  await expect(page.locator('#card-body')).toContainText(/pending/i)
+  await expect(page.locator('#card-body')).toContainText(/Guess the key/i)
 })
 
 test('attack 1: flipping coins mints a real key and its three addresses', async ({ page }) => {
