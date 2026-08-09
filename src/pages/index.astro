@@ -8,11 +8,207 @@ import Base from '../layouts/Base.astro'
     Bitcoin has been hacked, banned, bought, unplugged and declared dead 477 times — in
     headlines. Here you get the weapons to try it yourself.
   </p>
-  <p class="stub">
-    The observatory — the living globe of the real network and its ~10-minute heartbeat —
-    arrives in Phases 4–5.
+
+  <p class="stub" id="globe-slot">
+    The observatory — the living globe of the real network — arrives in Phase 5.
   </p>
+
+  <!-- The heartbeat: blockchain strip. Pure visual, nothing to click. -->
+  <section id="strip" aria-label="The Bitcoin blockchain, arriving live">
+    <div class="strip-head">
+      <span id="tap-mode" class="mode">connecting…</span>
+      <span id="countdown" class="countdown"></span>
+    </div>
+    <div id="blocks" class="blocks"></div>
+    <p class="strip-note">
+      One new block roughly every 10 minutes — an average, not a schedule. Some arrive in
+      seconds, some take an hour.
+    </p>
+  </section>
+
   <p style="margin-top: 2.5rem">
     <a class="cta" href="/attack">Attack the Network</a>
   </p>
 </Base>
+
+<script>
+  import { createDataTap, type BlockSummary } from '../tap/tap'
+
+  const tap = createDataTap()
+  const modeEl = document.getElementById('tap-mode')!
+  const countdownEl = document.getElementById('countdown')!
+  const blocksEl = document.getElementById('blocks')!
+
+  const SHOWN = 8 // tiles on screen
+  const AVG_BLOCK_SECONDS = 600
+  let shown: BlockSummary[] = []
+  let newestTimestamp = 0
+  let snapshotMode = false
+
+  function tile(block: BlockSummary, fresh = false): HTMLElement {
+    const el = document.createElement('div')
+    el.className = 'block-tile' + (fresh ? ' fresh' : '')
+    el.innerHTML = `<span class="height">#${block.height.toLocaleString('en-GB')}</span><span class="txs">${block.txCount.toLocaleString('en-GB')} payments</span>`
+    el.title = `Block ${block.height.toLocaleString('en-GB')} — ${block.txCount.toLocaleString('en-GB')} payments`
+    return el
+  }
+
+  function render(blocks: BlockSummary[]) {
+    blocksEl.innerHTML = ''
+    for (const b of blocks.slice(0, SHOWN)) blocksEl.appendChild(tile(b))
+  }
+
+  function arrive(block: BlockSummary) {
+    shown.unshift(block)
+    shown = shown.slice(0, SHOWN)
+    const el = tile(block, true)
+    blocksEl.prepend(el)
+    while (blocksEl.children.length > SHOWN) blocksEl.lastElementChild!.remove()
+  }
+
+  function tickCountdown() {
+    if (newestTimestamp === 0) return
+    const elapsed = Math.floor(Date.now() / 1000) - newestTimestamp
+    const remaining = AVG_BLOCK_SECONDS - elapsed
+    if (remaining > 0) {
+      const m = Math.floor(remaining / 60)
+      const s = String(remaining % 60).padStart(2, '0')
+      countdownEl.textContent = `next block in ~${m}:${s}`
+    } else {
+      countdownEl.textContent = 'next block: any moment now'
+    }
+  }
+
+  async function refresh(first = false) {
+    const result = await tap.recentBlocks()
+    snapshotMode = result.mode === 'snapshot'
+    modeEl.textContent = snapshotMode
+      ? `snapshot from ${result.dataDate} — live feed unreachable`
+      : 'LIVE'
+    modeEl.classList.toggle('live', !snapshotMode)
+    if (first) {
+      shown = result.data.slice(0, SHOWN)
+      newestTimestamp = shown[0]?.timestamp ?? 0
+      render(shown)
+    } else if (result.data[0] && shown[0] && result.data[0].height > shown[0].height) {
+      // Every block newer than what we're showing arrives, oldest-new first.
+      const fresh = result.data
+        .filter((b) => b.height > shown[0].height)
+        .sort((a, b) => a.height - b.height)
+      for (const b of fresh) arrive(b)
+      newestTimestamp = shown[0].timestamp
+    }
+    // Snapshot mode: heartbeat is simulated from the snapshot's tip so the
+    // strip still breathes; the banner above says exactly what it is.
+    if (snapshotMode && first) {
+      newestTimestamp = Math.floor(Date.now() / 1000) - 300 // mid-cycle
+      setInterval(() => {
+        const top = shown[0]
+        if (!top) return
+        arrive({
+          id: 'simulated',
+          height: top.height + 1,
+          timestamp: Math.floor(Date.now() / 1000),
+          txCount: 3000 + Math.floor(Math.random() * 1500),
+        })
+        newestTimestamp = Math.floor(Date.now() / 1000)
+      }, AVG_BLOCK_SECONDS * 1000)
+    }
+  }
+
+  refresh(true)
+  setInterval(tickCountdown, 1000)
+  setInterval(() => {
+    if (!snapshotMode) refresh()
+  }, 30_000)
+</script>
+
+<style>
+  #strip {
+    margin-top: 2rem;
+    background: var(--panel);
+    border: 1px solid #1c212b;
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+  }
+  .strip-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+  .mode {
+    font-size: 0.8rem;
+    color: var(--dim);
+    letter-spacing: 0.05em;
+  }
+  .mode.live {
+    color: #3fb950;
+    font-weight: 700;
+  }
+  .mode.live::before {
+    content: '●';
+    margin-right: 0.35rem;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    50% {
+      opacity: 0.3;
+    }
+  }
+  .countdown {
+    font-size: 0.85rem;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+  .blocks {
+    display: flex;
+    gap: 0.5rem;
+    overflow: hidden;
+  }
+  .strip-note {
+    margin: 0.75rem 0 0;
+    font-size: 0.8rem;
+    color: var(--dim);
+  }
+</style>
+
+<!-- Tiles are created in JS, so their styles must be global (scoped Astro
+     styles only reach elements present in the template). Keyed under #blocks. -->
+<style is:global>
+  #blocks .block-tile {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    background: #0b0e14;
+    border: 1px solid #232a37;
+    border-radius: 6px;
+    padding: 0.6rem 0.85rem;
+    white-space: nowrap;
+  }
+  #blocks .block-tile.fresh {
+    animation: block-slide-in 0.6s ease-out;
+    border-color: var(--orange);
+  }
+  @keyframes block-slide-in {
+    from {
+      transform: translateX(-1.5rem);
+      opacity: 0;
+    }
+    to {
+      transform: none;
+      opacity: 1;
+    }
+  }
+  #blocks .block-tile .height {
+    font-weight: 700;
+    font-size: 0.9rem;
+  }
+  #blocks .block-tile .txs {
+    font-size: 0.75rem;
+    color: var(--dim);
+  }
+</style>

@@ -28,6 +28,17 @@ for (const [path, expectedText] of routes) {
   })
 }
 
+test('homepage: the blockchain strip shows blocks, a mode flag, and a countdown', async ({
+  page,
+}) => {
+  await page.goto('/')
+  await expect(page.locator('#strip')).toBeVisible()
+  // The tap always delivers blocks — live feed or bundled snapshot.
+  await expect(page.locator('#blocks .block-tile')).not.toHaveCount(0, { timeout: 15000 })
+  await expect(page.locator('#tap-mode')).toContainText(/live|snapshot/i, { timeout: 15000 })
+  await expect(page.locator('#countdown')).toContainText(/next block/i, { timeout: 15000 })
+})
+
 test('attack 1: flipping coins mints a real key and its three addresses', async ({ page }) => {
   await page.goto('/attack/hack')
   await page.getByRole('button', { name: /flip 256 coins/i }).click()
