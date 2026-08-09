@@ -4,7 +4,7 @@
 import { expect, test } from '@playwright/test'
 
 const routes: Array<[path: string, expectedText: string]> = [
-  ['/', 'declared dead 477 times'],
+  ['/', 'Unstoppable, unkillable, and inevitable'],
   ['/attack', 'Think you can stop it'],
   ['/attack/hack', 'Just hack it'],
   ['/attack/shut-down', 'pull the plug'],
