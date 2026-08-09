@@ -7,6 +7,14 @@
 export function initRail(): void {
   const rail = document.getElementById('fund-rail')
   if (!rail) return
+
+  // The nav stays pinned on this page; chapters size themselves against its
+  // real height (it wraps to two rows on narrow screens) via --navh.
+  const nav = document.querySelector('nav')
+  const setNavHeight = () =>
+    document.documentElement.style.setProperty('--navh', `${nav?.offsetHeight ?? 0}px`)
+  setNavHeight()
+  window.addEventListener('resize', setNavHeight, { passive: true })
   const items = Array.from(rail.querySelectorAll<HTMLElement>('[data-target]'))
 
   const setActive = (id: string) =>

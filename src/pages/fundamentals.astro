@@ -54,7 +54,7 @@ import { CARDS } from '../fundamentals/cards'
 
 <style>
   .fchapter {
-    min-height: 100svh;
+    min-height: calc(100svh - var(--navh, 3.5rem));
     display: flex;
     align-items: center;
     justify-content: center;
@@ -187,6 +187,15 @@ import { CARDS } from '../fundamentals/cards'
      to the full-height chapters. */
   html:has(#fund-rail) {
     scroll-snap-type: y mandatory;
+    scroll-padding-top: var(--navh, 3.5rem);
+  }
+  /* Keep the top menu pinned while snapping between chapters. --navh is set
+     by rail.ts from the nav's real height (it wraps on narrow screens). */
+  html:has(#fund-rail) nav {
+    position: sticky;
+    top: 0;
+    z-index: 60;
+    background: var(--bg);
   }
   html:has(#fund-rail) main {
     max-width: none;
