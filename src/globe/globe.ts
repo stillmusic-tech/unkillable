@@ -375,9 +375,10 @@ export function createGlobe(
     if (!dragging) return
     const dx = clientX - lastX
     const dy = clientY - lastY
-    rotationY += dx * 0.005
+    // Negative: dragging right pulls the visible face of the globe rightwards.
+    rotationY -= dx * 0.005
     tiltX = Math.max(-1.2, Math.min(1.2, tiltX + dy * 0.005))
-    velocity = dx * 0.05
+    velocity = -dx * 0.05
     lastX = clientX
     lastY = clientY
     if (Math.abs(clientX - downX) > 4 || Math.abs(clientY - downY) > 4) moved = true
