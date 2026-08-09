@@ -27,6 +27,7 @@ const current = Astro.url.pathname
   </head>
   <body>
     <nav>
+      <a class="brand" href="/">UNKILLABLE</a>
       {
         nav.map((item) => (
           <a
@@ -91,10 +92,31 @@ const current = Astro.url.pathname
   nav {
     display: flex;
     flex-wrap: wrap;
+    align-items: center;
     justify-content: center;
     gap: 1.5rem;
     padding: 1rem 1.5rem;
     border-bottom: 1px solid #1c212b;
+  }
+  /* The brand sits at the left edge; margin-right: auto pushes the links right. */
+  nav .brand {
+    margin-right: auto;
+    color: var(--orange);
+    font-size: 1.25rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-decoration: none;
+  }
+  nav a.brand:hover {
+    color: var(--orange);
+  }
+  /* Narrow screens: the brand takes its own centred row, links wrap beneath. */
+  @media (max-width: 40rem) {
+    nav .brand {
+      flex-basis: 100%;
+      text-align: center;
+      margin-right: 0;
+    }
   }
   nav a {
     color: var(--dim);
