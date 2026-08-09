@@ -13,7 +13,7 @@ const routes: Array<[path: string, expectedText: string]> = [
   ['/attack/print', 'open it up and give yourself some'],
   ['/attack/time', 'Everything dies eventually'],
   ['/attack/quantum', 'a computer that breaks the maths itself'],
-  ['/fundamentals', 'What actually is Bitcoin?'],
+  ['/fundamentals', 'What is Bitcoin?'],
   ['/about', 'The honesty pledge'],
 ]
 
@@ -200,10 +200,10 @@ test('attack 7: aiming answers honestly, verdict is pending, report card renders
   await expect(page.locator('#card-body')).toContainText(/Guess the key/i)
 })
 
-test('fundamentals: eight cards in order, each exiting to an attack', async ({ page }) => {
+test('fundamentals: seven cards in order, each exiting to an attack', async ({ page }) => {
   await page.goto('/fundamentals')
-  await expect(page.locator('.fcard')).toHaveCount(8)
-  await expect(page.locator('.fcard').first()).toContainText('What actually is Bitcoin')
+  await expect(page.locator('.fcard')).toHaveCount(7)
+  await expect(page.locator('.fcard').first()).toContainText('What is Bitcoin')
   await expect(page.locator('.fcard').first().locator('.fattack')).toBeVisible()
   // Deep-link opens a specific card as an overlay.
   await page.goto('/fundamentals#node')
@@ -213,13 +213,13 @@ test('fundamentals: eight cards in order, each exiting to an attack', async ({ p
   await expect(page.locator('#fund-overlay')).toBeHidden()
 })
 
-test('fundamentals: chapter rail lists all eight and focuses a chapter on click', async ({
+test('fundamentals: chapter rail lists all seven and focuses a chapter on click', async ({
   page,
 }) => {
   await page.goto('/fundamentals')
   const items = page.locator('#fund-rail .rail-item')
-  await expect(items).toHaveCount(8)
-  await expect(items.nth(3)).toContainText('What does mining actually do?')
+  await expect(items).toHaveCount(7)
+  await expect(items.nth(3)).toContainText('What is Bitcoin mining?')
   // Clicking a chapter scrolls it into focus and the rail highlights it.
   await items.nth(3).click()
   await expect(page.locator('#mining')).toBeInViewport({ timeout: 5000 })
@@ -247,7 +247,7 @@ test('fundamentals: chapter rail lists all eight and focuses a chapter on click'
 
 test('fundamentals overlay opens mid-attack without leaving the page', async ({ page }) => {
   await page.goto('/attack/51-percent')
-  await page.getByRole('link', { name: /what does mining actually do/i }).click()
+  await page.getByRole('link', { name: /what is bitcoin mining/i }).click()
   await expect(page.locator('#fund-overlay')).toBeVisible()
   await expect(page.locator('#fund-body')).toContainText(/write the next page/i)
   // Still on the attack page — place not lost.
