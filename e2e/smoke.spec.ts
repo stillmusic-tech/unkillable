@@ -8,7 +8,7 @@ const routes: Array<[path: string, expectedText: string]> = [
   ['/attack', 'Think you can stop it'],
   ['/attack/hack', 'Just hack it'],
   ['/attack/shut-down', 'pull the plug'],
-  ['/attack/51-percent', 'The 51% attack'],
+  ['/attack/51-percent', 'more mining power than the rest of the world'],
   ['/attack/ban', 'Ban it'],
   ['/attack/print', 'Print more of it'],
   ['/attack/time', "It'll die eventually"],
@@ -107,6 +107,30 @@ test('attack 2: killing nodes leaves the network OPERATIONAL and dark-earth regr
   await expect
     .poll(async () => Number((await page.locator('#running').textContent())?.replace(/\D/g, '')))
     .toBeGreaterThan(0)
+})
+
+test('attack 3: buying mining power runs the bill and 51% reveals the prize', async ({
+  page,
+}) => {
+  await page.goto('/attack/51-percent')
+  await expect(page.locator('#spent')).toHaveText('$0')
+
+  // Buying raises the bill and your share.
+  await page.getByRole('button', { name: /one mining machine/i }).click()
+  await expect(page.locator('#spent')).not.toHaveText('$0')
+
+  // Buy a year of global production until 51% wins (buttons disable on win, so
+  // stop clicking once the prize shows).
+  const yearBtn = page.getByRole('button', { name: /year of global production/i })
+  const prize = page.locator('#prize')
+  for (let i = 0; i < 4 && !(await prize.isVisible()); i++) {
+    if (!(await yearBtn.isEnabled())) break
+    await yearBtn.click()
+  }
+  await expect(prize).toBeVisible()
+  await expect(page.locator('#prize')).toContainText(/still cannot/i)
+  await expect(page.locator('#prize')).toContainText(/steal a single coin/i)
+  await expect(page.locator('#prize-bill')).toContainText(/\$/)
 })
 
 test('attack 1: flipping coins mints a real key and its three addresses', async ({ page }) => {

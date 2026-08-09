@@ -3,7 +3,490 @@ import Base from '../../layouts/Base.astro'
 ---
 
 <Base title="The 51% attack">
-  <h1>The 51% attack</h1>
-  <p>Buy majority control of the mining power and claim your prize.</p>
-  <p class="stub">This weapon is being forged — Phase 8. The hardware shop, the bill and the YOU WIN panel arrive there.</p>
+  <p class="brief">
+    Forget hacking. Just buy more mining power than the rest of the world combined. Money
+    always wins — right?
+  </p>
+  <p class="ground">
+    Mining power = the computing muscle that writes Bitcoin's next page of records. Own more
+    than half and you get a say in what gets written.
+    <a href="/fundamentals">What does mining actually do?</a>
+  </p>
+
+  <!-- Scoreboard — always visible. -->
+  <div class="scoreboard">
+    <div class="sb-item">
+      <span class="sb-label">Your share</span>
+      <span class="sb-value" id="share">0.0%</span>
+    </div>
+    <div class="sb-item">
+      <span class="sb-label">💸 Total spent</span>
+      <span class="sb-value" id="spent">$0</span>
+    </div>
+    <div class="sb-item">
+      <span class="sb-label">⚡ Your electricity</span>
+      <span class="sb-value" id="power">0 GW</span>
+      <span class="sb-note" id="power-cmp"></span>
+    </div>
+  </div>
+
+  <!-- The tug-of-war. -->
+  <div class="tug">
+    <div class="side world">
+      <span class="side-label">THE WORLD</span>
+      <div class="bar-track">
+        <div class="bar world-bar" id="world-bar"></div>
+      </div>
+      <span class="side-num" id="world-num">— EH/s</span>
+    </div>
+    <div class="needle-wrap">
+      <div class="goal">goal: 51%</div>
+      <div class="needle-track">
+        <div class="needle" id="needle"></div>
+        <div class="goal-line"></div>
+      </div>
+    </div>
+    <div class="side you">
+      <span class="side-label">YOU</span>
+      <div class="bar-track">
+        <div class="bar you-bar" id="you-bar"></div>
+      </div>
+      <span class="side-num" id="you-num">0 EH/s</span>
+    </div>
+  </div>
+
+  <!-- The shop. -->
+  <div class="shop" id="shop" role="group" aria-label="Buy mining power"></div>
+  <p class="est">
+    Dollar and power figures are estimates — hardware and electricity prices move.
+    <a href="/about">Sources</a>.
+  </p>
+
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+
+  <!-- The turn: the prize panel (revealed at 51%). -->
+  <section id="prize" class="prize" hidden>
+    <h2>🎉 YOU WIN — here's your prize</h2>
+    <div class="prize-cols">
+      <div class="prize-col can">
+        <h3>✅ You can now</h3>
+        <ul>
+          <li>Delay other people's payments — while you keep paying the bills</li>
+          <li>Un-spend your <em>own</em> recent payments</li>
+        </ul>
+      </div>
+      <div class="prize-col cannot">
+        <h3>❌ You still cannot</h3>
+        <ul>
+          <li>Steal a single coin — every wallet is still locked by its key <em>(Attack 1)</em></li>
+          <li>Print new coins — every node checks the rules <em>(Attack 5)</em></li>
+          <li>Change history from years ago</li>
+        </ul>
+      </div>
+    </div>
+    <p class="prize-bill" id="prize-bill"></p>
+    <a class="cta" href="/attack/ban">Too rich to bother? Get the law on your side. →</a>
+  </section>
+
+  <details class="footnote">
+    <summary>Has this ever actually happened?</summary>
+    <p>
+      Yes — to <em>small</em> coins. Bitcoin Gold and Ethereum Classic were genuinely
+      51%-attacked, because renting a majority against a small network is cheap. Bitcoin's
+      sheer scale is the shield; this page's price tag is that shield in dollars. And one
+      mining pool did once approach half the network (GHash.io, 2014) — then voluntarily
+      shrank, because its members knew what it would do to the value of everything they
+      owned.
+    </p>
+  </details>
 </Base>
+
+<script>
+  import {
+    SHOP_ITEMS,
+    MACHINE_COST_USD,
+    biggestCountryExceeded,
+    hasWon,
+    sharePercent,
+    totalSpentUSD,
+    worldHashAfter,
+    yourHashEH,
+    yourPowerGW,
+    type Basket,
+  } from '../../engines/takeover/engine'
+  import { createDataTap } from '../../tap/tap'
+  import { browserStorage, markAttempted } from '../../progress/progress'
+
+  const $ = (id: string) => document.getElementById(id)!
+  const basket: Basket = {}
+  let worldBaseEH = 903.9
+  let startMs = Date.now()
+  let won = false
+  const milestones = { warehouse: false, year: false, big: false }
+
+  // Live world mining power (mempool.space sends CORS headers, so this is real).
+  const tap = createDataTap()
+  tap.hashrateEH().then((res) => {
+    worldBaseEH = res.data
+    startMs = Date.now()
+  })
+
+  // Build the shop.
+  const shopEl = $('shop')
+  for (const item of SHOP_ITEMS) {
+    const btn = document.createElement('button')
+    btn.className = 'buy'
+    btn.dataset.item = item.id
+    btn.innerHTML = `<span class="buy-icon">${item.icon}</span><span class="buy-label">${item.label}</span><span class="buy-price">${money(item.machines * MACHINE_COST_USD)}</span>`
+    btn.addEventListener('click', () => buy(item.id))
+    shopEl.appendChild(btn)
+  }
+
+  function money(n: number): string {
+    if (n >= 1e12) return '$' + (n / 1e12).toFixed(1) + ' trillion'
+    if (n >= 1e9) return '$' + (n / 1e9).toFixed(1) + ' billion'
+    if (n >= 1e6) return '$' + (n / 1e6).toFixed(1) + 'M'
+    if (n >= 1e3) return '$' + (n / 1e3).toFixed(0) + 'k'
+    return '$' + n.toLocaleString('en-GB')
+  }
+
+  function toast(msg: string, ms = 4500) {
+    const el = document.createElement('div')
+    el.className = 'toast'
+    el.textContent = msg
+    $('toasts').appendChild(el)
+    setTimeout(() => el.classList.add('show'), 10)
+    setTimeout(() => {
+      el.classList.remove('show')
+      setTimeout(() => el.remove(), 400)
+    }, ms)
+  }
+
+  function buy(id: string) {
+    if (won) return
+    basket[id] = (basket[id] ?? 0) + 1
+    react(id)
+    render()
+  }
+
+  function react(id: string) {
+    if (id === 'warehouse' && !milestones.warehouse) {
+      milestones.warehouse = true
+      toast('Nice. The network grew while you were shopping. It’s a moving target.')
+    }
+    if (id === 'year' && !milestones.year) {
+      milestones.year = true
+      toast(
+        'Every factory on Earth now works for you. Delivery: real machines take years to build and ship.',
+        6000,
+      )
+    }
+  }
+
+  function render() {
+    const elapsed = (Date.now() - startMs) / 1000
+    const worldEH = worldHashAfter(worldBaseEH, elapsed)
+    const youEH = yourHashEH(basket)
+    const share = sharePercent(youEH, worldEH)
+    const powerGW = yourPowerGW(basket)
+
+    $('share').textContent = share.toFixed(share < 1 ? 2 : 1) + '%'
+    $('spent').textContent = money(totalSpentUSD(basket))
+    $('power').textContent =
+      powerGW < 1 ? (powerGW * 1000).toFixed(0) + ' MW' : powerGW.toFixed(1) + ' GW'
+    const cmp = biggestCountryExceeded(powerGW)
+    $('power-cmp').textContent = cmp ? `more than ${cmp.name}` : ''
+    $('world-num').textContent = worldEH.toFixed(0) + ' EH/s'
+    $('you-num').textContent = youEH < 1 ? youEH.toFixed(3) + ' EH/s' : youEH.toFixed(0) + ' EH/s'
+
+    const max = Math.max(worldEH, youEH, 1)
+    ;($('world-bar') as HTMLElement).style.width = (worldEH / max) * 100 + '%'
+    ;($('you-bar') as HTMLElement).style.width = (youEH / max) * 100 + '%'
+    ;($('needle') as HTMLElement).style.left = Math.min(100, share) + '%'
+
+    if (share >= 20 && !milestones.big) {
+      milestones.big = true
+      toast('You are now one of the largest industrial operations in human history.')
+    }
+    if (hasWon(share) && !won) win()
+  }
+
+  function win() {
+    won = true
+    document.querySelectorAll('.buy').forEach((b) => ((b as HTMLButtonElement).disabled = true))
+    const bill = totalSpentUSD(basket)
+    $('prize-bill').textContent =
+      `You spent ${money(bill)} to gain the power to briefly inconvenience people — and you are now the single largest owner of Bitcoin mining equipment on Earth, the person with the most to lose if Bitcoin falls.`
+    const prize = $('prize') as HTMLElement
+    prize.hidden = false
+    prize.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    markAttempted(browserStorage(), '51-percent')
+  }
+
+  // Keep the world drifting up even when idle — the moving target.
+  render()
+  setInterval(render, 1000)
+</script>
+
+<style>
+  .brief {
+    font-size: 1.2rem;
+    color: var(--text);
+    margin: 0.25rem 0 0.75rem;
+  }
+  .ground {
+    color: var(--dim);
+    font-size: 0.9rem;
+    margin: 0 0 1.5rem;
+  }
+  .scoreboard {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    background: var(--panel);
+    border: 1px solid #1c212b;
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+  }
+  .sb-item {
+    display: flex;
+    flex-direction: column;
+  }
+  .sb-label {
+    font-size: 0.72rem;
+    color: var(--dim);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .sb-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .sb-note {
+    font-size: 0.75rem;
+    color: var(--orange);
+  }
+  .tug {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+    margin: 1.5rem 0;
+  }
+  .side {
+    display: grid;
+    grid-template-columns: 5rem 1fr auto;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .side-label {
+    font-weight: 700;
+    font-size: 0.85rem;
+    letter-spacing: 0.05em;
+  }
+  .side.world .side-label {
+    color: #6aa9ff;
+  }
+  .side.you .side-label {
+    color: var(--orange);
+  }
+  .bar-track {
+    background: #0b0e14;
+    border-radius: 6px;
+    height: 1.5rem;
+    overflow: hidden;
+  }
+  .bar {
+    height: 100%;
+    width: 0;
+    transition: width 0.5s ease-out;
+  }
+  .world-bar {
+    background: linear-gradient(90deg, #2a4a7a, #6aa9ff);
+  }
+  .you-bar {
+    background: linear-gradient(90deg, #7a4a10, var(--orange));
+  }
+  .side-num {
+    font-variant-numeric: tabular-nums;
+    font-size: 0.85rem;
+    color: var(--dim);
+    min-width: 5rem;
+    text-align: right;
+  }
+  .needle-wrap {
+    padding: 0.25rem 0;
+  }
+  .goal {
+    font-size: 0.72rem;
+    color: var(--dim);
+    text-align: right;
+    margin-bottom: 0.25rem;
+  }
+  .needle-track {
+    position: relative;
+    height: 6px;
+    background: #0b0e14;
+    border-radius: 3px;
+  }
+  .needle {
+    position: absolute;
+    top: -4px;
+    left: 0;
+    width: 3px;
+    height: 14px;
+    background: #fff;
+    border-radius: 2px;
+    transition: left 0.5s ease-out;
+  }
+  .goal-line {
+    position: absolute;
+    top: -6px;
+    left: 51%;
+    width: 2px;
+    height: 18px;
+    background: #3fb950;
+  }
+  .shop {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+    gap: 0.75rem;
+  }
+  .est {
+    font-size: 0.75rem;
+    color: var(--dim);
+    margin-top: 0.6rem;
+  }
+  .prize {
+    margin-top: 2rem;
+    background: var(--panel);
+    border: 1px solid var(--orange);
+    border-radius: 12px;
+    padding: 1.5rem;
+    text-align: center;
+  }
+  .prize h2 {
+    margin-top: 0;
+  }
+  .prize-cols {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    text-align: left;
+    margin: 1.25rem 0;
+  }
+  .prize-col h3 {
+    font-size: 1rem;
+  }
+  .prize-col.can h3 {
+    color: #3fb950;
+  }
+  .prize-col.cannot h3 {
+    color: #ff6b6b;
+  }
+  .prize-col ul {
+    padding-left: 1.1rem;
+    margin: 0;
+  }
+  .prize-col li {
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+  }
+  .prize-bill {
+    font-size: 1.05rem;
+    max-width: 40rem;
+    margin: 0 auto 1.5rem;
+  }
+  .footnote {
+    margin-top: 2rem;
+    border-top: 1px solid #1c212b;
+    padding-top: 1rem;
+    color: var(--dim);
+  }
+  .footnote summary {
+    cursor: pointer;
+    color: var(--text);
+  }
+  .footnote p {
+    font-size: 0.9rem;
+    margin: 0.75rem 0 0;
+  }
+  @media (max-width: 34rem) {
+    .prize-cols {
+      grid-template-columns: 1fr;
+    }
+    .side {
+      grid-template-columns: 4rem 1fr;
+    }
+    .side-num {
+      grid-column: 2;
+      text-align: left;
+    }
+  }
+</style>
+
+<!-- Shop buttons and toasts are JS-built: their styles must be global. -->
+<style is:global>
+  #shop .buy {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+    background: #0f141c;
+    border: 1px solid #2a3140;
+    border-radius: 8px;
+    padding: 0.85rem 1rem;
+    cursor: pointer;
+    color: var(--text);
+    text-align: left;
+    transition: border-color 0.15s;
+  }
+  #shop .buy:hover:not(:disabled) {
+    border-color: var(--orange);
+  }
+  #shop .buy:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+  #shop .buy-icon {
+    font-size: 1.4rem;
+  }
+  #shop .buy-label {
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+  #shop .buy-price {
+    font-size: 0.85rem;
+    color: var(--orange);
+    font-variant-numeric: tabular-nums;
+  }
+  #toasts {
+    position: fixed;
+    left: 50%;
+    bottom: 1.5rem;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: min(90%, 32rem);
+    pointer-events: none;
+    z-index: 20;
+  }
+  #toasts .toast {
+    background: rgba(16, 20, 27, 0.95);
+    border: 1px solid #2a3140;
+    border-left: 3px solid var(--orange);
+    border-radius: 6px;
+    padding: 0.6rem 0.85rem;
+    font-size: 0.9rem;
+    opacity: 0;
+    transform: translateY(8px);
+    transition:
+      opacity 0.35s,
+      transform 0.35s;
+  }
+  #toasts .toast.show {
+    opacity: 1;
+    transform: none;
+  }
+</style>
