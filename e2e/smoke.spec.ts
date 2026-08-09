@@ -39,6 +39,17 @@ test('homepage: the blockchain strip shows blocks, a mode flag, and a countdown'
   await expect(page.locator('#countdown')).toContainText(/next block/i, { timeout: 15000 })
 })
 
+test('homepage: the observatory globe renders with a dated node count', async ({ page }) => {
+  await page.goto('/')
+  await expect(page.locator('#globe')).toBeVisible()
+  // The canvas must actually get sized (the render loop ran).
+  await expect
+    .poll(async () => page.locator('#globe').evaluate((c: HTMLCanvasElement) => c.width))
+    .toBeGreaterThan(0)
+  await expect(page.locator('#node-count')).toContainText(/reachable nodes worldwide/i)
+  await expect(page.locator('#node-count')).toContainText(/drag to spin/i)
+})
+
 test('attack 1: flipping coins mints a real key and its three addresses', async ({ page }) => {
   await page.goto('/attack/hack')
   await page.getByRole('button', { name: /flip 256 coins/i }).click()

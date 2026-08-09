@@ -9,9 +9,11 @@ import Base from '../layouts/Base.astro'
     headlines. Here you get the weapons to try it yourself.
   </p>
 
-  <p class="stub" id="globe-slot">
-    The observatory — the living globe of the real network — arrives in Phase 5.
-  </p>
+  <!-- The observatory: the living globe. Drag to spin; nothing to click. -->
+  <section id="observatory" aria-label="The Bitcoin network, live">
+    <canvas id="globe" aria-hidden="true"></canvas>
+    <p id="node-count" class="node-count">counting nodes…</p>
+  </section>
 
   <!-- The heartbeat: blockchain strip. Pure visual, nothing to click. -->
   <section id="strip" aria-label="The Bitcoin blockchain, arriving live">
@@ -32,9 +34,34 @@ import Base from '../layouts/Base.astro'
 </Base>
 
 <script>
-  import { createDataTap, type BlockSummary } from '../tap/tap'
+  import { createDataTap, snapshotNodes, type BlockSummary } from '../tap/tap'
+  import { createGlobe } from '../globe/globe'
 
   const tap = createDataTap()
+
+  // --- The globe ------------------------------------------------------------
+  // Node coordinates come from the bundled snapshot, not a live call: the
+  // Bitnodes API sends no CORS header, so browsers can't read it, and node
+  // geography barely shifts day to day. We show the reachable-node count and
+  // the snapshot's month so the number is honest and dated (honesty pledge).
+  const globeCanvas = document.getElementById('globe') as HTMLCanvasElement | null
+  const nodeCountEl = document.getElementById('node-count')
+  if (globeCanvas) {
+    const res = snapshotNodes()
+    createGlobe(globeCanvas, res.data.points, {
+      autoRotateDegPerSec: 6,
+      showTransactions: true,
+    })
+    if (nodeCountEl) {
+      const total = res.data.totalReachable.toLocaleString('en-GB')
+      const month = new Date(res.dataDate + 'T00:00:00Z').toLocaleDateString('en-GB', {
+        month: 'long',
+        year: 'numeric',
+        timeZone: 'UTC',
+      })
+      nodeCountEl.textContent = `${total} reachable nodes worldwide (${month}) — drag to spin the Earth`
+    }
+  }
   const modeEl = document.getElementById('tap-mode')!
   const countdownEl = document.getElementById('countdown')!
   const blocksEl = document.getElementById('blocks')!
@@ -124,6 +151,28 @@ import Base from '../layouts/Base.astro'
 </script>
 
 <style>
+  #observatory {
+    margin-top: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  #globe {
+    width: 100%;
+    max-width: 34rem;
+    aspect-ratio: 1 / 1;
+    touch-action: pan-y;
+    cursor: grab;
+  }
+  #globe:active {
+    cursor: grabbing;
+  }
+  .node-count {
+    margin: 0.25rem 0 0;
+    font-size: 0.82rem;
+    color: var(--dim);
+    text-align: center;
+  }
   #strip {
     margin-top: 2rem;
     background: var(--panel);

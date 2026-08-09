@@ -66,3 +66,29 @@ describe('bundled snapshot sanity', () => {
     }
   })
 })
+
+const liveNodes = {
+  timestamp: 1790000000,
+  total_nodes: 27000,
+  coordinates: Array.from({ length: 5000 }, (_, i) => [(i % 170) - 85, (i % 350) - 175]),
+}
+const okNodeFetch: FetchLike = async () => ({ ok: true, json: async () => liveNodes })
+
+describe('data tap — nodes', () => {
+  it('thins a huge live list to a drawable sample, flagged live', async () => {
+    const tap = createDataTap(okNodeFetch)
+    const result = await tap.nodes()
+    expect(result.mode).toBe('live')
+    expect(result.data.points.length).toBeGreaterThan(0)
+    expect(result.data.points.length).toBeLessThanOrEqual(400)
+    expect(result.data.totalReachable).toBe(27000)
+  })
+
+  it('falls back to the bundled node snapshot when live is down', async () => {
+    const tap = createDataTap(downFetch)
+    const result = await tap.nodes()
+    expect(result.mode).toBe('snapshot')
+    expect(result.data.points.length).toBeGreaterThan(50)
+    expect(result.data.totalReachable).toBeGreaterThan(1000)
+  })
+})
