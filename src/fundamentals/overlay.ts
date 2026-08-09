@@ -37,7 +37,7 @@ function renderCard(card: FundCard): string {
     <div class="fund-icon">${card.icon}</div>
     <h2 id="fund-title">${card.title}</h2>
     <div class="fund-visual">${card.visual}</div>
-    <p class="fund-idea">${card.idea}</p>
+    <div class="fund-idea">${card.idea}</div>
     <a class="fund-attack" href="${card.attackHref}">${card.attackLabel}</a>`
 }
 

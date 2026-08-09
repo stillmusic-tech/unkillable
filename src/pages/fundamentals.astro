@@ -15,7 +15,7 @@ import { CARDS } from '../fundamentals/cards'
               <h2>{card.title}</h2>
             </div>
             <div class="fvisual" set:html={card.visual} />
-            <p class="fidea">{card.idea}</p>
+            <div class="fidea" set:html={card.idea} />
             <a class="fattack" href={card.attackHref}>
               {card.attackLabel}
             </a>
@@ -147,6 +147,7 @@ import { CARDS } from '../fundamentals/cards'
   .fidea {
     color: var(--text);
     line-height: 1.6;
+    margin-top: 1rem;
   }
   .fattack {
     display: inline-block;
@@ -215,6 +216,32 @@ import { CARDS } from '../fundamentals/cards'
     font-size: 0.8rem;
     color: var(--dim);
     margin: 0.5rem 0 0;
+  }
+
+  /* Chapter bodies are short paragraphs + bullet lists (set:html /
+     innerHTML, so scoped styles can't reach them). */
+  .fidea p,
+  #fund-body .fund-idea p {
+    margin: 0 0 0.8rem;
+  }
+  .fidea p:last-child,
+  #fund-body .fund-idea p:last-child {
+    margin-bottom: 0;
+  }
+  .fidea ul,
+  #fund-body .fund-idea ul {
+    margin: 0 0 0.8rem;
+    padding-left: 1.2rem;
+  }
+  .fidea li,
+  #fund-body .fund-idea li {
+    margin-bottom: 0.35rem;
+  }
+  /* The question that hands off to the next chapter. */
+  .fidea .fhook,
+  #fund-body .fund-idea .fhook {
+    color: var(--orange);
+    font-weight: 600;
   }
 
   /* The mid-attack overlay. */

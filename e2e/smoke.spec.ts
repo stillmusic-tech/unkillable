@@ -249,7 +249,7 @@ test('fundamentals overlay opens mid-attack without leaving the page', async ({ 
   await page.goto('/attack/51-percent')
   await page.getByRole('link', { name: /what is bitcoin mining/i }).click()
   await expect(page.locator('#fund-overlay')).toBeVisible()
-  await expect(page.locator('#fund-body')).toContainText(/write the next page/i)
+  await expect(page.locator('#fund-body')).toContainText(/writes the next block/i)
   // Still on the attack page — place not lost.
   await expect(page).toHaveURL(/51-percent/)
 })
