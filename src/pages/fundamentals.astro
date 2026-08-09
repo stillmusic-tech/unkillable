@@ -41,6 +41,27 @@ import { carouselHTML } from '../fundamentals/carousel'
   initFundamentals()
   initRail()
   document.querySelectorAll<HTMLElement>('.fbody .fcarousel').forEach(initCarousel)
+
+  // Left/right arrows step the carousel of the chapter in view (up/down
+  // already scrolls between chapters natively). When the overlay is open it
+  // handles its own arrow keys, so stay out of the way.
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
+    const overlay = document.getElementById('fund-overlay')
+    if (overlay && !overlay.hidden) return
+    let best: Element | null = null
+    let bestDist = Infinity
+    document.querySelectorAll('.fchapter').forEach((s) => {
+      const dist = Math.abs(s.getBoundingClientRect().top)
+      if (dist < bestDist) {
+        bestDist = dist
+        best = s
+      }
+    })
+    best
+      ?.querySelector<HTMLButtonElement>(e.key === 'ArrowLeft' ? '.fc-prev' : '.fc-next')
+      ?.click()
+  })
 </script>
 
 <style>

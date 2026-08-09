@@ -27,6 +27,13 @@ function ensureOverlay(): HTMLElement {
   )
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') close()
+    // Left/right steps the open card's carousel (disabled arrows ignore click).
+    if (overlayEl && !overlayEl.hidden) {
+      if (e.key === 'ArrowLeft')
+        bodyEl?.querySelector<HTMLButtonElement>('.fc-prev')?.click()
+      if (e.key === 'ArrowRight')
+        bodyEl?.querySelector<HTMLButtonElement>('.fc-next')?.click()
+    }
   })
   overlayEl = el
   bodyEl = el.querySelector('#fund-body')

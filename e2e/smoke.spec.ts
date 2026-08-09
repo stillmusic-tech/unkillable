@@ -236,6 +236,26 @@ test('fundamentals: each chapter is a carousel — one idea at a time', async ({
   expect(/\p{Extended_Pictographic}/u.test(text)).toBe(false)
 })
 
+test('fundamentals: left/right arrow keys step the in-view carousel and the overlay', async ({
+  page,
+}) => {
+  await page.goto('/fundamentals')
+  const carousel = page.locator('.fcard').first().locator('.fcarousel')
+  const slides = carousel.locator('.fc-slide')
+  // Right arrow advances the chapter in view; left steps back.
+  await page.keyboard.press('ArrowRight')
+  await expect(slides.nth(1)).toBeVisible()
+  await page.keyboard.press('ArrowLeft')
+  await expect(slides.first()).toBeVisible()
+  // With the overlay open, arrows drive its carousel — not the page behind it.
+  await page.goto('/fundamentals#node')
+  const overlaySlides = page.locator('#fund-overlay .fc-slide')
+  await expect(overlaySlides.first()).toBeVisible()
+  await page.keyboard.press('ArrowRight')
+  await expect(overlaySlides.nth(1)).toBeVisible()
+  await expect(slides.first()).toBeVisible()
+})
+
 test('fundamentals: chapter rail lists all seven and focuses a chapter on click', async ({
   page,
 }) => {
