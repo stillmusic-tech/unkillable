@@ -13,7 +13,7 @@ const routes: Array<[path: string, expectedText: string]> = [
   ['/attack/print', 'open it up and give yourself some'],
   ['/attack/time', 'Everything dies eventually'],
   ['/attack/quantum', 'a computer that breaks the maths itself'],
-  ['/fundamentals', 'Bitcoin Fundamentals'],
+  ['/fundamentals', 'explained from zero'],
   ['/about', 'About'],
 ]
 
@@ -198,6 +198,28 @@ test('attack 7: aiming answers honestly, verdict is pending, report card renders
   // The report card shows quantum as pending after aiming.
   await expect(page.locator('#card-body')).toContainText(/pending/i)
   await expect(page.locator('#card-body')).toContainText(/Guess the key/i)
+})
+
+test('fundamentals: eight cards in order, each exiting to an attack', async ({ page }) => {
+  await page.goto('/fundamentals')
+  await expect(page.locator('.fcard')).toHaveCount(8)
+  await expect(page.locator('.fcard').first()).toContainText('What actually is Bitcoin')
+  await expect(page.locator('.fcard').first().locator('.fattack')).toBeVisible()
+  // Deep-link opens a specific card as an overlay.
+  await page.goto('/fundamentals#node')
+  await expect(page.locator('#fund-overlay')).toBeVisible()
+  await expect(page.locator('#fund-body')).toContainText(/node/i)
+  await page.locator('.fund-close').click()
+  await expect(page.locator('#fund-overlay')).toBeHidden()
+})
+
+test('fundamentals overlay opens mid-attack without leaving the page', async ({ page }) => {
+  await page.goto('/attack/51-percent')
+  await page.getByRole('link', { name: /what does mining actually do/i }).click()
+  await expect(page.locator('#fund-overlay')).toBeVisible()
+  await expect(page.locator('#fund-body')).toContainText(/write the next page/i)
+  // Still on the attack page — place not lost.
+  await expect(page).toHaveURL(/51-percent/)
 })
 
 test('attack 1: flipping coins mints a real key and its three addresses', async ({ page }) => {

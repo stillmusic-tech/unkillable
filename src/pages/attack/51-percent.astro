@@ -10,7 +10,7 @@ import Base from '../../layouts/Base.astro'
   <p class="ground">
     Mining power = the computing muscle that writes Bitcoin's next page of records. Own more
     than half and you get a say in what gets written.
-    <a href="/fundamentals">What does mining actually do?</a>
+    <a href="/fundamentals#mining" data-card="mining">What does mining actually do?</a>
   </p>
 
   <!-- Scoreboard — always visible. -->
@@ -116,6 +116,7 @@ import Base from '../../layouts/Base.astro'
   } from '../../engines/takeover/engine'
   import { createDataTap } from '../../tap/tap'
   import { browserStorage, markAttempted } from '../../progress/progress'
+  import { initFundamentals } from '../../fundamentals/overlay'
 
   const $ = (id: string) => document.getElementById(id)!
   const basket: Basket = {}
@@ -226,6 +227,8 @@ import Base from '../../layouts/Base.astro'
   // Keep the world drifting up even when idle — the moving target.
   render()
   setInterval(render, 1000)
+  // Inline "term" links open the Fundamentals card as an overlay in place.
+  initFundamentals()
 </script>
 
 <style>

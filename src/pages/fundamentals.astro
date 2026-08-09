@@ -1,9 +1,186 @@
 ---
 import Base from '../layouts/Base.astro'
+import { CARDS } from '../fundamentals/cards'
 ---
 
 <Base title="Bitcoin Fundamentals">
   <h1>Bitcoin Fundamentals</h1>
-  <p>Eight two-minute cards, starting from "what actually is Bitcoin" — no jargon, no homework.</p>
-  <p class="stub">The ladder arrives in Phase 15.</p>
+  <p class="intro">Everything on this site, explained from zero. About two minutes each.</p>
+
+  <div class="ladder">
+    {
+      CARDS.map((card, i) => (
+        <article class="fcard" id={card.id}>
+          <div class="fcard-head">
+            <span class="fnum">{i + 1}</span>
+            <span class="ficon">{card.icon}</span>
+            <h2>{card.title}</h2>
+          </div>
+          <div class="fvisual" set:html={card.visual} />
+          <p class="fidea">{card.idea}</p>
+          <a class="fattack" href={card.attackHref}>
+            {card.attackLabel}
+          </a>
+        </article>
+      ))
+    }
+  </div>
 </Base>
+
+<script>
+  import { initFundamentals } from '../fundamentals/overlay'
+  initFundamentals()
+</script>
+
+<style>
+  .intro {
+    font-size: 1.1rem;
+    color: var(--text);
+    margin-bottom: 2rem;
+  }
+  .ladder {
+    display: grid;
+    gap: 1.25rem;
+  }
+  .fcard {
+    background: var(--panel);
+    border: 1px solid #1c212b;
+    border-radius: 12px;
+    padding: 1.5rem;
+    scroll-margin-top: 5rem;
+  }
+  .fcard-head {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+  .fnum {
+    width: 1.6rem;
+    height: 1.6rem;
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: #0b0e14;
+    border: 1px solid #2a3140;
+    font-size: 0.85rem;
+    color: var(--dim);
+  }
+  .ficon {
+    font-size: 1.6rem;
+  }
+  .fcard-head h2 {
+    font-size: 1.2rem;
+    margin: 0;
+  }
+  .fidea {
+    color: var(--text);
+    line-height: 1.6;
+  }
+  .fattack {
+    display: inline-block;
+    margin-top: 0.75rem;
+    color: var(--orange);
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .fattack:hover {
+    text-decoration: underline;
+  }
+</style>
+
+<!-- Card visuals and the overlay are shared/JS-mounted → global styles. -->
+<style is:global>
+  .fvisual .viz-row,
+  #fund-body .viz-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    font-size: 1.9rem;
+    background: #0b0e14;
+    border-radius: 8px;
+    padding: 1rem;
+    flex-wrap: wrap;
+  }
+  .fvisual .viz-chain,
+  #fund-body .viz-chain {
+    font-size: 1.5rem;
+    gap: 0.35rem;
+  }
+  .fvisual .viz-big,
+  #fund-body .viz-big {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: var(--orange);
+    letter-spacing: 0.02em;
+  }
+  .fvisual .viz-cap,
+  #fund-body .viz-cap {
+    text-align: center;
+    font-size: 0.8rem;
+    color: var(--dim);
+    margin: 0.5rem 0 0;
+  }
+
+  /* The mid-attack overlay. */
+  #fund-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+  #fund-overlay[hidden] {
+    display: none;
+  }
+  #fund-overlay .fund-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(2, 4, 8, 0.8);
+  }
+  #fund-overlay .fund-card {
+    position: relative;
+    z-index: 1;
+    max-width: 32rem;
+    width: 100%;
+    max-height: 88vh;
+    overflow-y: auto;
+    background: var(--panel);
+    border: 1px solid #2a3140;
+    border-radius: 14px;
+    padding: 1.75rem;
+  }
+  #fund-overlay .fund-close {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.9rem;
+    background: none;
+    border: none;
+    color: var(--dim);
+    font-size: 1.1rem;
+    cursor: pointer;
+  }
+  #fund-overlay .fund-icon {
+    font-size: 2.2rem;
+  }
+  #fund-overlay h2 {
+    margin: 0.25rem 0 1rem;
+    font-size: 1.35rem;
+  }
+  #fund-overlay .fund-idea {
+    line-height: 1.6;
+    color: var(--text);
+  }
+  #fund-overlay .fund-attack {
+    display: inline-block;
+    margin-top: 0.75rem;
+    color: var(--orange);
+    font-weight: 600;
+    text-decoration: none;
+  }
+</style>

@@ -9,7 +9,7 @@ import Base from '../../layouts/Base.astro'
   </p>
   <p class="ground">
     You're a miner now: your job is to write the next page of Bitcoin's record book.
-    <a href="/fundamentals">What does mining do?</a>
+    <a href="/fundamentals#mining" data-card="mining">What does mining do?</a>
   </p>
 
   <div class="scoreboard">
@@ -88,6 +88,7 @@ import Base from '../../layouts/Base.astro'
   } from '../../engines/counterfeit/engine'
   import { snapshotNodes } from '../../tap/tap'
   import { browserStorage, markAttempted } from '../../progress/progress'
+  import { initFundamentals } from '../../fundamentals/overlay'
 
   const $ = (id: string) => document.getElementById(id)!
   let current: CheatId = 'straight'
@@ -292,6 +293,8 @@ import Base from '../../layouts/Base.astro'
   select('straight')
   layoutDots()
   window.addEventListener('resize', layoutDots)
+  // Inline "term" links open the Fundamentals card as an overlay in place.
+  initFundamentals()
 </script>
 
 <style>
