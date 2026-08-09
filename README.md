@@ -14,5 +14,6 @@ Attack Bitcoin yourself and watch what actually happens. Live at [unkillable.bit
 | `npm test`         | Engine + data-tap tests (Vitest)          |
 | `npm run build`    | Static build to `dist/`                   |
 | `npm run test:e2e` | Page smoke tests (Playwright, needs build) |
+| `npx wrangler deploy` | Build + publish live to Cloudflare               |
 
-Deployed by Cloudflare (Workers static hosting) on every push to `main` — build `npm run build`, deploy `npx wrangler deploy`, config in `wrangler.jsonc`.
+**Deploy is manual, not push-to-deploy.** Cloudflare (Workers static hosting) serves the site, but pushing to `main` does NOT publish it — GitHub CI only runs the tests. To go live, run `npm run build && npx wrangler deploy` (config in `wrangler.jsonc`; needs a one-time `npx wrangler login`). The custom domain `unkillable.bitcoin-fix.com` is a Worker custom domain; its edge cache can serve the previous version for a short while after a deploy.
