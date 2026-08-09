@@ -10,7 +10,7 @@ const routes: Array<[path: string, expectedText: string]> = [
   ['/attack/shut-down', 'pull the plug'],
   ['/attack/51-percent', 'more mining power than the rest of the world'],
   ['/attack/ban', 'Just make it illegal'],
-  ['/attack/print', 'Print more of it'],
+  ['/attack/print', 'open it up and give yourself some'],
   ['/attack/time', "It'll die eventually"],
   ['/attack/quantum', 'Quantum'],
   ['/fundamentals', 'Bitcoin Fundamentals'],
@@ -147,6 +147,21 @@ test('attack 4: banning stays OPERATIONAL and ban-all reveals the turn', async (
   await expect(page.locator('#turn')).toContainText(/didn't make it stop/i)
   await expect(page.locator('#net-status')).toHaveText(/operational/i)
   await expect(page.locator('#bans')).toHaveText('195')
+})
+
+test('attack 5: honest block is accepted, a cheat block is rejected', async ({ page }) => {
+  await page.goto('/attack/print')
+  // Honest by default → accepted.
+  await page.getByRole('button', { name: /submit to the network/i }).click()
+  await expect(page.locator('#accepted')).toHaveText('1', { timeout: 5000 })
+  await expect(page.locator('#chain .chain-block')).toHaveCount(1)
+
+  // Cheat: mint past the cap → rejected, with the turn revealed.
+  await page.getByRole('button', { name: /mine coin 21,000,001/i }).click()
+  await page.getByRole('button', { name: /submit to the network/i }).click()
+  await expect(page.locator('#rejected')).toHaveText('1', { timeout: 5000 })
+  await expect(page.locator('#turn')).toBeVisible()
+  await expect(page.locator('#turn-line')).toContainText(/every copy of the software/i)
 })
 
 test('attack 1: flipping coins mints a real key and its three addresses', async ({ page }) => {
