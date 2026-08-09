@@ -9,7 +9,6 @@ interface Props {
 }
 const { title } = Astro.props
 const nav = [
-  { href: '/', label: 'Home' },
   { href: '/attack', label: 'Attack the Network' },
   { href: '/fundamentals', label: 'Bitcoin Fundamentals' },
   { href: '/about', label: 'About' },
@@ -27,7 +26,7 @@ const current = Astro.url.pathname
   </head>
   <body>
     <nav>
-      <a class="brand" href="/">UNKILLABLE</a>
+      <a class="brand" href="/" aria-current={current === '/' ? 'page' : undefined}>UNKILLABLE</a>
       {
         nav.map((item) => (
           <a
@@ -93,30 +92,16 @@ const current = Astro.url.pathname
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     gap: 1.5rem;
     padding: 1rem 1.5rem;
     border-bottom: 1px solid #1c212b;
   }
-  /* The brand sits at the left edge; margin-right: auto pushes the links right. */
+  /* The brand is the home link: dim like the others, orange only when current. */
   nav .brand {
-    margin-right: auto;
-    color: var(--orange);
     font-size: 1.25rem;
     font-weight: 800;
     letter-spacing: 0.06em;
-    text-decoration: none;
-  }
-  nav a.brand:hover {
-    color: var(--orange);
-  }
-  /* Narrow screens: the brand takes its own centred row, links wrap beneath. */
-  @media (max-width: 40rem) {
-    nav .brand {
-      flex-basis: 100%;
-      text-align: center;
-      margin-right: 0;
-    }
   }
   nav a {
     color: var(--dim);
