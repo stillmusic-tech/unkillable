@@ -1,0 +1,122 @@
+{
+  "source": "Halvings are exact on-chain heights; other events pinned at close public estimates.",
+  "retrieved": "2026-08-09",
+  "genesisDate": "2009-01-03",
+  "obituariesTotal": 477,
+  "obituariesSource": "99bitcoins 'Bitcoin Obituaries' public archive",
+  "avgSecondsPerBlock": 585,
+  "events": [
+    {
+      "height": 0,
+      "date": "2009-01-03",
+      "kind": "genesis",
+      "title": "The genesis block",
+      "note": "Value then: nothing. Embedded in it: a newspaper headline \u2014 'Chancellor on brink of second bailout for banks.'",
+      "source": "Bitcoin genesis block coinbase"
+    },
+    {
+      "height": 74638,
+      "date": "2010-08-15",
+      "kind": "outage",
+      "title": "The value-overflow bug",
+      "note": "A bug briefly created 184 billion fake coins. Caught and erased within hours \u2014 one of only two times the record ever broke.",
+      "source": "CVE-2010-5139"
+    },
+    {
+      "height": 100000,
+      "date": "2010-12-29",
+      "kind": "obituary",
+      "title": "'Bitcoin is dead' \u2014 an early obituary",
+      "note": "Declared dead here. The wall has added over 860,000 blocks since.",
+      "source": "99bitcoins obituary archive"
+    },
+    {
+      "height": 131000,
+      "date": "2011-06-19",
+      "kind": "crash",
+      "title": "Mt. Gox hacked \u00b7 price \u221293%",
+      "note": "Price fell 93%. Block time: still ~10 minutes. The price and the machine are different things.",
+      "source": "Public price + exchange records"
+    },
+    {
+      "height": 210000,
+      "date": "2012-11-28",
+      "kind": "halving",
+      "title": "First halving \u2014 50 \u2192 25 BTC",
+      "note": "The new-coin rate halved, exactly on schedule, with no one deciding it that day.",
+      "source": "On-chain (exact)"
+    },
+    {
+      "height": 225430,
+      "date": "2013-03-11",
+      "kind": "outage",
+      "title": "The 2013 chain split",
+      "note": "A software glitch split the record for about 6 hours. The second \u2014 and last \u2014 time it ever broke.",
+      "source": "BIP50 incident report"
+    },
+    {
+      "height": 273000,
+      "date": "2013-12-04",
+      "kind": "crash",
+      "title": "2013 top, then \u221280%",
+      "note": "A furious run to ~$1,150, then a long collapse. Blocks kept arriving throughout.",
+      "source": "Public price records"
+    },
+    {
+      "height": 285000,
+      "date": "2014-02-24",
+      "kind": "disaster",
+      "title": "Mt. Gox collapses",
+      "note": "The biggest exchange imploded \u2014 a company failing, next door to a network that didn't miss a beat.",
+      "source": "Mt. Gox bankruptcy filing"
+    },
+    {
+      "height": 420000,
+      "date": "2016-07-09",
+      "kind": "halving",
+      "title": "Second halving \u2014 25 \u2192 12.5 BTC",
+      "note": "On schedule again.",
+      "source": "On-chain (exact)"
+    },
+    {
+      "height": 498000,
+      "date": "2017-12-17",
+      "kind": "crash",
+      "title": "2017 top ~$19,700, then \u221284%",
+      "note": "The mania everyone remembers. Then the drawdown the wall simply continued through.",
+      "source": "Public price records"
+    },
+    {
+      "height": 630000,
+      "date": "2020-05-11",
+      "kind": "halving",
+      "title": "Third halving \u2014 12.5 \u2192 6.25 BTC",
+      "note": "On schedule again.",
+      "source": "On-chain (exact)"
+    },
+    {
+      "height": 688000,
+      "date": "2021-06-01",
+      "kind": "ban",
+      "title": "China bans mining (you fired this in Attack 4)",
+      "note": "Half the world's mining went dark. Recovered within months.",
+      "source": "Cambridge CBECI"
+    },
+    {
+      "height": 762000,
+      "date": "2022-11-11",
+      "kind": "disaster",
+      "title": "FTX collapses",
+      "note": "Another giant exchange gone overnight. The ledger underneath: uninterrupted.",
+      "source": "FTX bankruptcy filing"
+    },
+    {
+      "height": 840000,
+      "date": "2024-04-20",
+      "kind": "halving",
+      "title": "Fourth halving \u2014 6.25 \u2192 3.125 BTC",
+      "note": "On schedule again.",
+      "source": "On-chain (exact)"
+    }
+  ]
+}

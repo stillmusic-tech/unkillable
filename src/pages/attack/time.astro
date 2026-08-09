@@ -3,7 +3,468 @@ import Base from '../../layouts/Base.astro'
 ---
 
 <Base title="It'll die eventually">
-  <h1>It'll die eventually</h1>
-  <p>The uptime wall: every block since January 2009, with all 477 obituaries pinned where they happened.</p>
-  <p class="stub">This weapon is being forged — Phases 11–12. The zoomable wall and ⏩ Skip to the end arrive there.</p>
+  <p class="brief">
+    Every empire fell. Every currency died. You don't need to attack anything — just wait.
+    Everything dies eventually.
+  </p>
+
+  <div class="scoreboard">
+    <div class="sb-item">
+      <span class="sb-label">Days running</span>
+      <span class="sb-value" id="days">…</span>
+    </div>
+    <div class="sb-item">
+      <span class="sb-label">Obituaries survived</span>
+      <span class="sb-value" id="obits">477</span>
+    </div>
+    <div class="sb-item">
+      <span class="sb-label">Blocks</span>
+      <span class="sb-value" id="blocks">…</span>
+    </div>
+    <button id="skip" class="skip">⏩ Skip to the end</button>
+  </div>
+
+  <div class="wall-wrap">
+    <canvas id="wall" aria-label="The Bitcoin blockchain, every block since 2009"></canvas>
+    <div id="tip" class="tip" hidden></div>
+    <div class="hint" id="wall-hint">drag to fly along · scroll to zoom</div>
+  </div>
+
+  <!-- The turn (revealed when you reach the present). -->
+  <section id="turn" class="turn" hidden>
+    <p class="turn-line" id="turn-line"></p>
+    <a class="cta" href="/attack/quantum">
+      Survived everything the past could throw at it. But the future has a weapon the past
+      didn't. →
+    </a>
+  </section>
+
+  <details class="footnote">
+    <summary>Has it really never gone down?</summary>
+    <p>
+      <strong>It has — twice, early on.</strong> A 2010 bug briefly created billions of fake
+      coins (caught and erased within hours), and a 2013 glitch split the record for about six
+      hours. Both are marked on the wall, not hidden. Since 2013: unbroken. But seventeen years
+      is a heartbeat next to institutions that lasted centuries — past survival proves
+      resilience, not immortality. Which is exactly why the last attack is about the future.
+    </p>
+  </details>
 </Base>
+
+<script>
+  import {
+    approxDateForHeight,
+    blockToX,
+    clampZoom,
+    daysRunning,
+    eventsInWindow,
+    visibleWindow,
+    xToBlock,
+    type TimelineEvent,
+  } from '../../engines/wall/engine'
+  import { createDataTap } from '../../tap/tap'
+  import { browserStorage, markAttempted } from '../../progress/progress'
+
+  const $ = (id: string) => document.getElementById(id)!
+  const canvas = $('wall') as HTMLCanvasElement
+  const ctx = canvas.getContext('2d')!
+
+  let tipHeight = 961_690 // updated from the tap
+  let leftBlock = 0 // leftmost visible block
+  let blocksPerPx = clampZoom(tipHeight / 900) // start fully zoomed out
+  let reachedEnd = false
+
+  const ICON: Record<string, string> = {
+    genesis: '🌱',
+    halving: '½',
+    crash: '📉',
+    ban: '🚫',
+    disaster: '🏦',
+    outage: '⚠️',
+    obituary: '💀',
+    ath: '🚀',
+  }
+
+  function cssSize() {
+    return canvas.getBoundingClientRect()
+  }
+
+  function resize() {
+    const rect = cssSize()
+    const dpr = Math.min(window.devicePixelRatio || 1, 2)
+    canvas.width = rect.width * dpr
+    canvas.height = rect.height * dpr
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    draw()
+  }
+
+  function clampScroll() {
+    const rect = cssSize()
+    const spanBlocks = rect.width * blocksPerPx
+    leftBlock = Math.max(0, Math.min(tipHeight - spanBlocks * 0.15, leftBlock))
+  }
+
+  function draw() {
+    const rect = cssSize()
+    const W = rect.width
+    const H = rect.height
+    ctx.clearRect(0, 0, W, H)
+    const win = visibleWindow(leftBlock, blocksPerPx, W, tipHeight)
+    const pxPerBlock = 1 / win.blocksPerPx
+
+    // The wall of blocks. When zoomed out we draw one column per pixel
+    // (aggregate); zoomed in, one brick per block. Bounded by width either way.
+    const brickTop = H * 0.28
+    const brickH = H * 0.44
+    if (pxPerBlock >= 3) {
+      // Zoomed in: distinct bricks with a gap.
+      for (let b = win.firstBlock; b <= win.lastBlock; b++) {
+        const x = blockToX(b, leftBlock, blocksPerPx)
+        if (x < -pxPerBlock || x > W) continue
+        ctx.fillStyle = b % 2 ? '#243044' : '#2b3850'
+        ctx.fillRect(x, brickTop, Math.max(1, pxPerBlock - 1.5), brickH)
+      }
+    } else {
+      // Zoomed out: a continuous textured band, one column per pixel.
+      for (let px = 0; px < W; px++) {
+        const b = xToBlock(px, leftBlock, blocksPerPx)
+        if (b < 0 || b > tipHeight) continue
+        const shade = 34 + ((b >> 6) % 22)
+        ctx.fillStyle = `rgb(${shade},${shade + 12},${shade + 26})`
+        ctx.fillRect(px, brickTop, 1, brickH)
+      }
+    }
+
+    // Baseline (the unbroken rhythm).
+    ctx.strokeStyle = 'rgba(63,185,80,0.5)'
+    ctx.lineWidth = 2
+    ctx.beginPath()
+    ctx.moveTo(0, brickTop + brickH + 8)
+    ctx.lineTo(W, brickTop + brickH + 8)
+    ctx.stroke()
+
+    // Event pins in the window.
+    const evs = eventsInWindow(win)
+    for (const e of evs) {
+      const x = blockToX(e.height, leftBlock, blocksPerPx)
+      if (x < 0 || x > W) continue
+      ctx.strokeStyle = 'rgba(247,147,26,0.55)'
+      ctx.lineWidth = 1
+      ctx.beginPath()
+      ctx.moveTo(x, brickTop - 6)
+      ctx.lineTo(x, brickTop + brickH)
+      ctx.stroke()
+      ctx.font = '16px system-ui'
+      ctx.textAlign = 'center'
+      ctx.fillText(ICON[e.kind] ?? '•', x, brickTop - 10)
+    }
+
+    // Year ticks along the bottom.
+    ctx.fillStyle = 'rgba(139,143,152,0.9)'
+    ctx.font = '11px system-ui'
+    ctx.textAlign = 'center'
+    const step = niceBlockStep(win.blocksPerPx, W)
+    const startTick = Math.ceil(win.firstBlock / step) * step
+    for (let b = startTick; b <= win.lastBlock; b += step) {
+      const x = blockToX(b, leftBlock, blocksPerPx)
+      ctx.fillText(approxDateForHeight(b).slice(0, 7), x, H - 6)
+    }
+
+    // The building edge: the tip, with the empty slot for the next brick.
+    const tipX = blockToX(tipHeight, leftBlock, blocksPerPx)
+    if (tipX <= W + 5) {
+      ctx.strokeStyle = 'rgba(247,147,26,0.9)'
+      ctx.setLineDash([4, 4])
+      ctx.strokeRect(tipX + 2, brickTop, Math.max(6, pxPerBlock), brickH)
+      ctx.setLineDash([])
+    }
+  }
+
+  function niceBlockStep(bpp: number, width: number): number {
+    // Aim for a tick every ~140px.
+    const target = 140 * bpp
+    const steps = [144, 1008, 4320, 12960, 52560, 105120, 210000, 420000]
+    for (const s of steps) if (s >= target) return s
+    return steps[steps.length - 1]
+  }
+
+  // --- Interaction ---------------------------------------------------------
+  let dragging = false
+  let lastX = 0
+  let moved = false
+  canvas.addEventListener('mousedown', (e) => {
+    dragging = true
+    lastX = e.clientX
+    moved = false
+  })
+  window.addEventListener('mousemove', (e) => {
+    if (dragging) {
+      const dx = e.clientX - lastX
+      if (Math.abs(dx) > 2) moved = true
+      leftBlock -= dx * blocksPerPx
+      lastX = e.clientX
+      clampScroll()
+      draw()
+      checkEnd()
+    }
+    hover(e)
+  })
+  window.addEventListener('mouseup', () => (dragging = false))
+  canvas.addEventListener(
+    'wheel',
+    (e) => {
+      e.preventDefault()
+      const rect = cssSize()
+      const anchorBlock = xToBlock(e.clientX - rect.left, leftBlock, blocksPerPx)
+      const factor = e.deltaY > 0 ? 1.2 : 1 / 1.2
+      blocksPerPx = clampZoom(blocksPerPx * factor)
+      // keep the block under the cursor fixed
+      leftBlock = anchorBlock - (e.clientX - rect.left) * blocksPerPx
+      clampScroll()
+      draw()
+    },
+    { passive: false },
+  )
+  // Touch: drag to scroll, pinch to zoom.
+  let pinchDist = 0
+  canvas.addEventListener(
+    'touchstart',
+    (e) => {
+      if (e.touches.length === 1) {
+        lastX = e.touches[0].clientX
+        dragging = true
+      } else if (e.touches.length === 2) {
+        pinchDist = Math.abs(e.touches[0].clientX - e.touches[1].clientX)
+      }
+    },
+    { passive: true },
+  )
+  canvas.addEventListener(
+    'touchmove',
+    (e) => {
+      if (e.touches.length === 1 && dragging) {
+        const dx = e.touches[0].clientX - lastX
+        leftBlock -= dx * blocksPerPx
+        lastX = e.touches[0].clientX
+        clampScroll()
+        draw()
+        checkEnd()
+      } else if (e.touches.length === 2) {
+        const d = Math.abs(e.touches[0].clientX - e.touches[1].clientX)
+        if (pinchDist > 0) {
+          blocksPerPx = clampZoom(blocksPerPx * (pinchDist / Math.max(1, d)))
+          clampScroll()
+          draw()
+        }
+        pinchDist = d
+      }
+      e.preventDefault()
+    },
+    { passive: false },
+  )
+  canvas.addEventListener('touchend', () => (dragging = false))
+
+  function hover(e: MouseEvent) {
+    const rect = cssSize()
+    if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) {
+      $('tip').hidden = true
+      return
+    }
+    const win = visibleWindow(leftBlock, blocksPerPx, rect.width, tipHeight)
+    const near = eventsInWindow(win).find((ev) => {
+      const x = blockToX(ev.height, leftBlock, blocksPerPx) + rect.left
+      return Math.abs(x - e.clientX) < 14
+    })
+    const tip = $('tip') as HTMLElement
+    if (near) {
+      const added = (tipHeight - near.height).toLocaleString('en-GB')
+      tip.innerHTML = `<strong>${near.title}</strong><span class="tip-date">${near.date}</span><span class="tip-note">${near.note}</span><span class="tip-since">The wall has added ${added} blocks since.</span>`
+      tip.style.left = Math.min(rect.width - 260, e.clientX - rect.left) + 'px'
+      tip.hidden = false
+    } else {
+      tip.hidden = true
+    }
+  }
+
+  function checkEnd() {
+    const rect = cssSize()
+    const tipX = blockToX(tipHeight, leftBlock, blocksPerPx)
+    if (tipX <= rect.width + 20 && !reachedEnd) reachEnd()
+  }
+
+  function reachEnd() {
+    reachedEnd = true
+    markAttempted(browserStorage(), 'time')
+    $('turn-line').textContent = `You are now watching block ${tipHeight.toLocaleString('en-GB')} being built. You didn’t reach the end of the story — you reached the present, and it kept going. The obituary writers were watching this same wall when they wrote.`
+    ;($('turn') as HTMLElement).hidden = false
+  }
+
+  // Skip to the end: animate the scroll to the building edge, zooming in.
+  $('skip').addEventListener('click', () => {
+    const rect = cssSize()
+    const targetZoom = clampZoom(30) // ~30 blocks/px near the tip
+    const targetLeft = tipHeight - rect.width * targetZoom * 0.8
+    const startLeft = leftBlock
+    const startZoom = blocksPerPx
+    const DURATION = 1600
+    let start = 0
+    function anim(t: number) {
+      if (!start) start = t
+      const p = Math.min(1, (t - start) / DURATION)
+      const e = 1 - Math.pow(1 - p, 3)
+      leftBlock = startLeft + (targetLeft - startLeft) * e
+      blocksPerPx = clampZoom(startZoom + (targetZoom - startZoom) * e)
+      clampScroll()
+      draw()
+      if (p < 1) requestAnimationFrame(anim)
+      else {
+        checkEnd()
+        reachEnd()
+      }
+    }
+    requestAnimationFrame(anim)
+    setTimeout(() => {
+      // Safety net for backgrounded tabs.
+      leftBlock = targetLeft
+      blocksPerPx = targetZoom
+      clampScroll()
+      draw()
+      reachEnd()
+    }, DURATION + 400)
+  })
+
+  // --- Live data -----------------------------------------------------------
+  const tap = createDataTap()
+  async function refresh() {
+    const res = await tap.recentBlocks()
+    if (res.data[0]) {
+      tipHeight = res.data[0].height
+      $('blocks').textContent = tipHeight.toLocaleString('en-GB')
+      $('days').textContent = daysRunning(res.data[0].timestamp * 1000).toLocaleString('en-GB')
+      draw()
+    }
+  }
+  refresh()
+  setInterval(refresh, 30_000)
+
+  resize()
+  window.addEventListener('resize', resize)
+</script>
+
+<style>
+  .brief {
+    font-size: 1.2rem;
+    color: var(--text);
+    margin: 0.25rem 0 1.25rem;
+  }
+  .scoreboard {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.75rem;
+    align-items: center;
+    background: var(--panel);
+    border: 1px solid #1c212b;
+    border-radius: 10px;
+    padding: 0.9rem 1.15rem;
+  }
+  .sb-item {
+    display: flex;
+    flex-direction: column;
+  }
+  .sb-label {
+    font-size: 0.7rem;
+    color: var(--dim);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .sb-value {
+    font-size: 1.4rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .skip {
+    margin-left: auto;
+    background: var(--orange);
+    color: #0a0a0a;
+    font-weight: 700;
+    border: none;
+    border-radius: 8px;
+    padding: 0.65rem 1.1rem;
+    cursor: pointer;
+    font-size: 0.95rem;
+  }
+  .wall-wrap {
+    position: relative;
+    margin-top: 1.25rem;
+  }
+  #wall {
+    width: 100%;
+    height: 15rem;
+    display: block;
+    background: #0a0e15;
+    border: 1px solid #1c212b;
+    border-radius: 10px;
+    cursor: grab;
+    touch-action: none;
+  }
+  #wall:active {
+    cursor: grabbing;
+  }
+  .hint {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.75rem;
+    font-size: 0.72rem;
+    color: var(--dim);
+    pointer-events: none;
+  }
+  .tip {
+    position: absolute;
+    top: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    width: 15rem;
+    background: rgba(16, 20, 27, 0.97);
+    border: 1px solid #2a3140;
+    border-left: 3px solid var(--orange);
+    border-radius: 6px;
+    padding: 0.6rem 0.75rem;
+    font-size: 0.82rem;
+    pointer-events: none;
+    z-index: 5;
+  }
+  .tip-date {
+    color: var(--orange);
+    font-size: 0.72rem;
+  }
+  .tip-note {
+    color: var(--text);
+  }
+  .tip-since {
+    color: var(--dim);
+    font-size: 0.72rem;
+  }
+  .turn {
+    margin-top: 1.75rem;
+    text-align: center;
+  }
+  .turn-line {
+    font-size: 1.2rem;
+    max-width: 42rem;
+    margin: 0 auto 1.25rem;
+  }
+  .footnote {
+    margin-top: 2rem;
+    border-top: 1px solid #1c212b;
+    padding-top: 1rem;
+    color: var(--dim);
+  }
+  .footnote summary {
+    cursor: pointer;
+    color: var(--text);
+  }
+  .footnote p {
+    font-size: 0.9rem;
+  }
+</style>

@@ -11,7 +11,7 @@ const routes: Array<[path: string, expectedText: string]> = [
   ['/attack/51-percent', 'more mining power than the rest of the world'],
   ['/attack/ban', 'Just make it illegal'],
   ['/attack/print', 'open it up and give yourself some'],
-  ['/attack/time', "It'll die eventually"],
+  ['/attack/time', 'Everything dies eventually'],
   ['/attack/quantum', 'Quantum'],
   ['/fundamentals', 'Bitcoin Fundamentals'],
   ['/about', 'About'],
@@ -162,6 +162,21 @@ test('attack 5: honest block is accepted, a cheat block is rejected', async ({ p
   await expect(page.locator('#rejected')).toHaveText('1', { timeout: 5000 })
   await expect(page.locator('#turn')).toBeVisible()
   await expect(page.locator('#turn-line')).toContainText(/every copy of the software/i)
+})
+
+test('attack 6: the wall renders and skip-to-end lands on the present', async ({ page }) => {
+  await page.goto('/attack/time')
+  await expect(page.locator('#wall')).toBeVisible()
+  // The wall canvas gets sized (render ran).
+  await expect
+    .poll(async () => page.locator('#wall').evaluate((c: HTMLCanvasElement) => c.width))
+    .toBeGreaterThan(0)
+  // Blocks count populates from the tap (live or snapshot).
+  await expect(page.locator('#blocks')).not.toHaveText('…', { timeout: 15000 })
+
+  await page.getByRole('button', { name: /skip to the end/i }).click()
+  await expect(page.locator('#turn')).toBeVisible({ timeout: 5000 })
+  await expect(page.locator('#turn-line')).toContainText(/being built/i)
 })
 
 test('attack 1: flipping coins mints a real key and its three addresses', async ({ page }) => {
