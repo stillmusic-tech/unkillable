@@ -3,6 +3,8 @@ import '@fontsource/saira/400.css'
 import '@fontsource/saira/600.css'
 import '@fontsource/saira/700.css'
 import '@fontsource/saira/800.css'
+import '@fontsource/jetbrains-mono/400.css'
+import '@fontsource/jetbrains-mono/700.css'
 
 interface Props {
   title: string
@@ -51,10 +53,16 @@ const current = Astro.url.pathname
 <style is:global>
   :root {
     --bg: #07090d;
-    --panel: #10141b;
-    --text: #e8e6e1;
-    --dim: #8b8f98;
+    /* Panels are translucent glass over the body's grid + glow backdrop. */
+    --panel: rgba(255, 255, 255, 0.03);
+    --well: rgba(3, 5, 9, 0.55);
+    --line: rgba(255, 255, 255, 0.08);
+    --line-bright: rgba(255, 255, 255, 0.14);
+    --text: #f3f4f6;
+    --dim: #9ca3af;
     --orange: #f7931a;
+    --glow: 0 0 20px rgba(247, 147, 26, 0.15);
+    --mono: 'JetBrains Mono', ui-monospace, monospace;
   }
   * {
     box-sizing: border-box;
@@ -73,6 +81,26 @@ const current = Astro.url.pathname
       -apple-system,
       sans-serif;
     line-height: 1.5;
+  }
+  /* Depth instead of flat black: a faint grid plus two warm radial glows on a
+     fixed layer behind everything. (Not background-attachment: fixed — Chrome
+     paints that black on scroll-snap pages.) */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.022) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.022) 1px, transparent 1px),
+      radial-gradient(50rem 30rem at 75% -5%, rgba(247, 147, 26, 0.06), transparent 65%),
+      radial-gradient(42rem 28rem at 12% 108%, rgba(247, 147, 26, 0.05), transparent 65%);
+    background-size:
+      44px 44px,
+      44px 44px,
+      auto,
+      auto;
   }
   /* Type floor: nothing renders below 16px. Buttons and inputs default to the
      browser's 13px, and sup/sub to `smaller`, so they need saying explicitly.
@@ -94,8 +122,11 @@ const current = Astro.url.pathname
     align-items: center;
     justify-content: flex-start;
     gap: 1.5rem;
-    padding: 1rem 1.5rem;
-    border-bottom: 1px solid #1c212b;
+    padding: 1.35rem 1.5rem;
+    border-bottom: 1px solid var(--line);
+    background: rgba(7, 9, 13, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
   }
   /* The brand is the home link: dim like the others, orange only when current. */
   nav .brand {
@@ -120,16 +151,20 @@ const current = Astro.url.pathname
     margin: 0 auto;
     padding: 2.5rem 1.5rem 4rem;
   }
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.02em;
+  }
   h1 {
     font-size: 2rem;
-    letter-spacing: 0.01em;
   }
   a {
     color: var(--orange);
   }
   .stub {
     color: var(--dim);
-    border: 1px dashed #2a3140;
+    border: 1px dashed var(--line-bright);
     border-radius: 8px;
     padding: 1rem 1.25rem;
     margin-top: 1.5rem;
@@ -155,29 +190,40 @@ const current = Astro.url.pathname
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #0b0e14;
+    background: var(--well);
     border-radius: 8px;
     padding: 1rem;
   }
   .viz-big {
+    font-family: var(--mono);
     font-size: 1.6rem;
-    font-weight: 800;
+    font-weight: 700;
     color: var(--orange);
-    letter-spacing: 0.02em;
   }
 
-  /* One idea at a time: arrows either side, dots along the bottom. */
+  /* One idea at a time: the slide on top, controls in a footer bar beneath —
+     counter left, pill dots centre, arrow buttons right. */
   .fcarousel {
-    display: grid;
-    grid-template-columns: auto 1fr auto;
-    align-items: center;
-    gap: 0.5rem;
     margin-top: 1rem;
   }
   .fc-viewport {
     min-height: 9rem;
     display: flex;
     align-items: center;
+  }
+  .fc-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    border-top: 1px solid var(--line);
+    margin-top: 1rem;
+    padding-top: 0.9rem;
+  }
+  .fc-count {
+    font-family: var(--mono);
+    font-size: 1rem;
+    color: var(--dim);
+    min-width: 3.4rem;
   }
   .fc-slide {
     display: none;
@@ -207,38 +253,49 @@ const current = Astro.url.pathname
     font-weight: 600;
   }
   .fc-arrow {
-    background: none;
-    border: none;
+    width: 2rem;
+    height: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--well);
+    border: 1px solid var(--line-bright);
+    border-radius: 8px;
     color: var(--dim);
-    font-size: 1.8rem;
+    font-size: 1.25rem;
     line-height: 1;
-    padding: 0 0.25rem;
+    padding: 0;
     cursor: pointer;
   }
   .fc-arrow:hover:not(:disabled) {
     color: var(--orange);
+    border-color: var(--orange);
   }
   .fc-arrow:disabled {
     opacity: 0.25;
     cursor: default;
   }
   .fc-dots {
-    grid-column: 1 / -1;
+    flex: 1;
     display: flex;
     justify-content: center;
     gap: 0.45rem;
-    margin-top: 0.9rem;
   }
+  /* Pill indicators: the active slide's pill stretches out. */
   .fc-dot {
-    width: 0.5rem;
-    height: 0.5rem;
-    border-radius: 50%;
+    width: 12px;
+    height: 4px;
+    border-radius: 2px;
     border: none;
     padding: 0;
-    background: #2a3140;
+    background: var(--line-bright);
     cursor: pointer;
+    transition:
+      width 0.25s ease,
+      background 0.25s ease;
   }
   .fc-dot.is-active {
+    width: 24px;
     background: var(--orange);
   }
 
@@ -268,9 +325,12 @@ const current = Astro.url.pathname
     max-height: 88vh;
     overflow-y: auto;
     background: var(--panel);
-    border: 1px solid #2a3140;
+    border: 1px solid var(--line-bright);
     border-radius: 14px;
     padding: 1.75rem;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: var(--glow);
   }
   #fund-overlay .fund-close {
     position: absolute;

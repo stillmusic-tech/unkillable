@@ -175,9 +175,12 @@ import Base from '../layouts/Base.astro'
   #strip {
     margin-top: 2rem;
     background: var(--panel);
-    border: 1px solid #1c212b;
-    border-radius: 10px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
     padding: 1rem 1.25rem;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: var(--glow);
   }
   .strip-head {
     display: flex;
@@ -207,9 +210,9 @@ import Base from '../layouts/Base.astro'
     }
   }
   .countdown {
+    font-family: var(--mono);
     font-size: 1rem;
     color: var(--text);
-    font-variant-numeric: tabular-nums;
   }
   .blocks {
     display: flex;
@@ -231,7 +234,7 @@ import Base from '../layouts/Base.astro'
     display: flex;
     flex-direction: column;
     gap: 0.2rem;
-    background: #0b0e14;
+    background: var(--well);
     border: 1px solid #232a37;
     border-radius: 6px;
     padding: 0.6rem 0.85rem;
@@ -252,6 +255,7 @@ import Base from '../layouts/Base.astro'
     }
   }
   #blocks .block-tile .height {
+    font-family: var(--mono);
     font-weight: 700;
     font-size: 1rem;
   }
