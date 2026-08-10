@@ -115,13 +115,13 @@ import Base from '../layouts/Base.astro'
     if (newestTimestamp === 0) return
     const elapsed = Math.floor(Date.now() / 1000) - newestTimestamp
     const remaining = AVG_BLOCK_SECONDS - elapsed
-    if (remaining > 0) {
-      const m = Math.floor(remaining / 60)
-      const s = String(remaining % 60).padStart(2, '0')
-      countdownEl.textContent = `next block in ~${m}:${s}`
-    } else {
-      countdownEl.textContent = 'next block: any moment now'
-    }
+    // Past the 10-minute average the timer goes negative rather than vague:
+    // blocks are a lottery, and an overdue one is worth showing honestly.
+    const abs = Math.abs(remaining)
+    const m = Math.floor(abs / 60)
+    const s = String(abs % 60).padStart(2, '0')
+    countdownEl.textContent = `next block in ~${remaining < 0 ? '-' : ''}${m}:${s}`
+    countdownEl.classList.toggle('overdue', remaining < 0)
   }
 
   async function refresh(first = false) {
@@ -249,6 +249,10 @@ import Base from '../layouts/Base.astro'
     font-family: var(--mono);
     font-size: 1rem;
     color: var(--text);
+  }
+  /* Overdue: the timer has gone negative, the block is late. */
+  .countdown.overdue {
+    color: var(--orange);
   }
   .blocks-row {
     display: flex;
