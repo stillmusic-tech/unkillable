@@ -13,6 +13,10 @@ import Base from '../layouts/Base.astro'
     <canvas id="globe" aria-hidden="true"></canvas>
   </section>
 
+  <p class="cta-row">
+    <a class="cta" href="/attack">Attack the Network</a>
+  </p>
+
   <!-- The heartbeat: blockchain strip. Pure visual, nothing to click. -->
   <section id="strip" aria-label="The Bitcoin blockchain, arriving live">
     <div class="strip-head">
@@ -32,10 +36,6 @@ import Base from '../layouts/Base.astro'
       </div>
     </div>
   </section>
-
-  <p style="margin-top: 2.5rem; text-align: center">
-    <a class="cta" href="/attack">Attack the Network</a>
-  </p>
 
   <!-- The vitals panel: key numbers about the network right now. Floats at the
        right edge on wide screens, folds into the page flow on narrow ones. -->
@@ -246,6 +246,10 @@ import Base from '../layouts/Base.astro'
   }
   #globe:active {
     cursor: grabbing;
+  }
+  .cta-row {
+    margin: 1.5rem 0 0;
+    text-align: center;
   }
   #strip {
     margin-top: 2rem;
