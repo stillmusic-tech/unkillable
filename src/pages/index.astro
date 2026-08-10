@@ -26,14 +26,13 @@ import Base from '../layouts/Base.astro'
       <!-- The block being assembled right now: fills from the mempool until
            it's minted and joins the chain to its left. -->
       <div id="next-block" class="next-block">
-        <span class="height">next block</span>
-        <span id="next-txs" class="txs">counting…</span>
+        <div class="cube next-cube"></div>
+        <div class="binfo">
+          <span class="height">next block</span>
+          <span id="next-txs" class="txs">counting…</span>
+        </div>
       </div>
     </div>
-    <p class="strip-note">
-      One new block roughly every 10 minutes — an average, not a schedule. Some arrive in
-      seconds, some take an hour.
-    </p>
   </section>
 
   <p style="margin-top: 2.5rem; text-align: center">
@@ -84,7 +83,7 @@ import Base from '../layouts/Base.astro'
     const el = document.createElement('div')
     el.className = 'block-tile' + (fresh ? ' fresh' : '')
     const size = block.sizeBytes ? `<span class="size">${(block.sizeBytes / 1e6).toFixed(2)} MB</span>` : ''
-    el.innerHTML = `<span class="height">#${block.height.toLocaleString('en-GB')}</span><span class="txs">${block.txCount.toLocaleString('en-GB')} payments</span>${size}`
+    el.innerHTML = `<div class="cube"></div><div class="binfo"><span class="height">#${block.height.toLocaleString('en-GB')}</span><span class="txs">${block.txCount.toLocaleString('en-GB')} payments</span>${size}</div>`
     el.title = `Block ${block.height.toLocaleString('en-GB')} — ${block.txCount.toLocaleString('en-GB')} payments`
     return el
   }
@@ -266,46 +265,20 @@ import Base from '../layouts/Base.astro'
     overflow: hidden;
     flex: 1;
     min-width: 0;
+    /* The oldest block dissolves into the past instead of clipping mid-tile. */
+    mask-image: linear-gradient(90deg, transparent 0, #000 4.5rem);
+    -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 4.5rem);
   }
-  /* The block being assembled: dashed, breathing, waiting to be minted. */
+  /* The assembling block: a breathing orange cube, details underneath.
+     Cube + binfo styles live in the global block, shared with the JS tiles. */
   .next-block {
+    position: relative;
     flex: 0 0 auto;
     display: flex;
     flex-direction: column;
-    gap: 0.2rem;
-    justify-content: center;
-    border: 1px dashed rgba(247, 147, 26, 0.55);
-    border-radius: 6px;
-    padding: 0.6rem 0.85rem;
+    align-items: center;
+    gap: 0.5rem;
     white-space: nowrap;
-    animation: assemble-pulse 2.4s ease-in-out infinite;
-  }
-  .next-block .height {
-    font-family: var(--mono);
-    font-weight: 700;
-    font-size: 1rem;
-    color: var(--orange);
-  }
-  .next-block .txs {
-    font-family: var(--mono);
-    font-size: 1rem;
-    color: var(--dim);
-  }
-  @keyframes assemble-pulse {
-    0%,
-    100% {
-      box-shadow: 0 0 6px rgba(247, 147, 26, 0.1);
-      border-color: rgba(247, 147, 26, 0.35);
-    }
-    50% {
-      box-shadow: 0 0 16px rgba(247, 147, 26, 0.3);
-      border-color: rgba(247, 147, 26, 0.7);
-    }
-  }
-  .strip-note {
-    margin: 0.75rem 0 0;
-    font-size: 1rem;
-    color: var(--dim);
   }
 </style>
 
@@ -317,28 +290,65 @@ import Base from '../layouts/Base.astro'
     flex: 0 0 auto;
     display: flex;
     flex-direction: column;
-    gap: 0.2rem;
-    background: var(--well);
-    border: 1px solid var(--line-bright);
-    border-radius: 6px;
-    padding: 0.6rem 0.85rem;
+    align-items: center;
+    gap: 0.5rem;
     white-space: nowrap;
   }
-  /* Chain links: each block points at the one it builds on (to its left —
-     newest arrives on the right). */
-  #blocks .block-tile:not(:last-child)::after {
-    content: '‹';
+  /* An isometric-ish cube: the div is the front face, ::before is the top
+     face, ::after the right face. Extruded toward the top-right. */
+  #strip .cube {
+    position: relative;
+    width: 38px;
+    height: 38px;
+    margin: 10px 10px 0 0;
+    background: linear-gradient(160deg, #1a212d, #0c1017);
+    border: 1px solid var(--line-bright);
+  }
+  #strip .cube::before {
+    content: '';
     position: absolute;
-    left: -0.85rem;
-    top: 50%;
-    transform: translateY(-50%);
-    color: rgba(247, 147, 26, 0.5);
-    font-size: 1.1rem;
-    line-height: 1;
+    top: -10px;
+    left: 4px;
+    width: 100%;
+    height: 9px;
+    background: #232c3b;
+    border: 1px solid var(--line-bright);
+    transform: skewX(-45deg);
+  }
+  #strip .cube::after {
+    content: '';
+    position: absolute;
+    top: -5px;
+    right: -10px;
+    width: 9px;
+    height: 100%;
+    background: #0a0d13;
+    border: 1px solid var(--line-bright);
+    transform: skewY(-45deg);
+  }
+  /* Simple white lines tying the chain together, at cube mid-height. The
+     cube column is 48px tall (38px face + 10px extrusion margin), so the
+     visual centre sits ~29px down. */
+  #blocks .block-tile:not(:last-child)::before,
+  #strip .next-block::before {
+    content: '';
+    position: absolute;
+    left: -1.2rem;
+    top: 29px;
+    width: 1.3rem;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.45);
   }
   #blocks .block-tile.fresh {
     animation: block-slide-in 0.6s ease-out;
+  }
+  #blocks .block-tile.fresh .cube,
+  #blocks .block-tile.fresh .cube::before,
+  #blocks .block-tile.fresh .cube::after {
     border-color: var(--orange);
+  }
+  #blocks .block-tile.fresh .cube {
+    box-shadow: var(--glow);
   }
   @keyframes block-slide-in {
     from {
@@ -350,18 +360,49 @@ import Base from '../layouts/Base.astro'
       opacity: 1;
     }
   }
-  #blocks .block-tile .height {
+  /* The assembling cube breathes orange until it's minted. */
+  #strip .next-cube,
+  #strip .next-cube::before,
+  #strip .next-cube::after {
+    border-color: rgba(247, 147, 26, 0.55);
+  }
+  #strip .next-cube {
+    animation: assemble-pulse 2.4s ease-in-out infinite;
+  }
+  @keyframes assemble-pulse {
+    0%,
+    100% {
+      box-shadow: 0 0 6px rgba(247, 147, 26, 0.1);
+    }
+    50% {
+      box-shadow: 0 0 18px rgba(247, 147, 26, 0.35);
+    }
+  }
+  /* Block details sit under the cube. 12px on Laurence's explicit call —
+     the one sanctioned exception to the 16px type floor. */
+  #strip .binfo {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    text-align: center;
+  }
+  #strip .binfo .height {
     font-family: var(--mono);
     font-weight: 700;
-    font-size: 1rem;
+    font-size: 12px;
+    color: var(--text);
   }
-  #blocks .block-tile .txs {
-    font-size: 1rem;
+  #strip .binfo .txs {
+    font-size: 12px;
     color: var(--dim);
   }
-  #blocks .block-tile .size {
+  #strip .binfo .size {
     font-family: var(--mono);
-    font-size: 1rem;
+    font-size: 12px;
     color: var(--dim);
+  }
+  #strip .next-block .binfo .height {
+    color: var(--orange);
   }
 </style>
