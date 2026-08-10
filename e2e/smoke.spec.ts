@@ -4,7 +4,7 @@
 import { expect, test } from '@playwright/test'
 
 const routes: Array<[path: string, expectedText: string]> = [
-  ['/', 'unstoppable, unkillable, and inevitable'],
+  ['/', 'Is bitcoin unkillable?'],
   ['/attack', 'Think you can stop it'],
   ['/attack/hack', 'Just hack it'],
   ['/attack/shut-down', 'pull the plug'],
@@ -39,15 +39,44 @@ test('homepage: the blockchain strip shows blocks, a mode flag, and a countdown'
   await expect(page.locator('#countdown')).toContainText(/next block/i, { timeout: 15000 })
 })
 
-test('homepage: the observatory globe renders with a dated node count', async ({ page }) => {
+test('homepage: the observatory globe renders', async ({ page }) => {
   await page.goto('/')
   await expect(page.locator('#globe')).toBeVisible()
   // The canvas must actually get sized (the render loop ran).
   await expect
     .poll(async () => page.locator('#globe').evaluate((c: HTMLCanvasElement) => c.width))
     .toBeGreaterThan(0)
-  await expect(page.locator('#node-count')).toContainText(/reachable nodes worldwide/i)
-  await expect(page.locator('#node-count')).toContainText(/drag to spin/i)
+})
+
+// The vitals panel: price and hashrate come from the tap, the node count from
+// the bundled snapshot, and supply/halving/energy are derived maths. Every row
+// must resolve to a real number — a lingering em-dash means its feed died.
+test('homepage: the vitals panel fills all seven rows', async ({ page }) => {
+  await page.goto('/')
+  await expect(page.locator('#vitals')).toBeVisible()
+  const rows = page.locator('#vitals .v-row')
+  await expect(rows).toHaveCount(7)
+  for (const id of [
+    '#v-price',
+    '#v-height',
+    '#v-hashrate',
+    '#v-nodes',
+    '#v-energy',
+    '#v-supply',
+    '#v-halving',
+  ]) {
+    await expect(page.locator(id)).toContainText(/\d/, { timeout: 15000 })
+  }
+  await expect(page.locator('#v-supply')).toContainText(/of 21M/)
+})
+
+// The header stays put while the page scrolls under it, on every page.
+test('the nav header stays pinned when the page scrolls', async ({ page }) => {
+  await page.goto('/attack/hack')
+  await page.evaluate(() => window.scrollTo(0, 600))
+  await expect.poll(async () => page.evaluate(() => window.scrollY)).toBeGreaterThan(0)
+  const top = await page.locator('nav').evaluate((n) => n.getBoundingClientRect().top)
+  expect(top).toBe(0)
 })
 
 test('armoury: seven weapon cards with doubts, roles, and live scars', async ({ page }) => {
