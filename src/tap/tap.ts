@@ -7,6 +7,7 @@ import blocksSnapshot from '../data/blocks-snapshot.json'
 import nodesSnapshot from '../data/nodes-snapshot.json'
 import hashrateSnapshot from '../data/hashrate-snapshot.json'
 import mempoolSnapshot from '../data/mempool-snapshot.json'
+import priceSnapshot from '../data/price-snapshot.json'
 
 export interface BlockSummary {
   id: string
@@ -43,6 +44,7 @@ const BLOCKS_URL = 'https://mempool.space/api/v1/blocks'
 const NODES_URL = 'https://bitnodes.io/api/v1/snapshots/latest/?field=coordinates'
 const HASHRATE_URL = 'https://mempool.space/api/v1/mining/hashrate/3d'
 const MEMPOOL_URL = 'https://mempool.space/api/mempool'
+const PRICE_URL = 'https://mempool.space/api/v1/prices'
 const TIMEOUT_MS = 8000
 const NODE_SAMPLE_CAP = 400
 
@@ -116,6 +118,18 @@ interface RawHashrate {
   currentHashrate: number // H/s
 }
 
+export function snapshotPrice(): TapResult<number> {
+  return {
+    mode: 'snapshot',
+    dataDate: priceSnapshot.retrieved,
+    data: priceSnapshot.priceUSD,
+  }
+}
+
+interface RawPrices {
+  USD: number
+}
+
 export interface DataTap {
   /** Newest-first list of recent blocks. Never throws — falls back to snapshot. */
   recentBlocks(): Promise<TapResult<BlockSummary[]>>
@@ -125,6 +139,8 @@ export interface DataTap {
   hashrateEH(): Promise<TapResult<number>>
   /** How many transactions are waiting in the mempool. Never throws. */
   mempoolTxCount(): Promise<TapResult<number>>
+  /** One bitcoin's dollar price. Never throws — falls back to snapshot. */
+  priceUSD(): Promise<TapResult<number>>
 }
 
 export function createDataTap(fetchFn?: FetchLike, timeoutMs = TIMEOUT_MS): DataTap {
@@ -213,6 +229,24 @@ export function createDataTap(fetchFn?: FetchLike, timeoutMs = TIMEOUT_MS): Data
         }
       } catch {
         return snapshotMempool()
+      }
+    },
+
+    async priceUSD() {
+      try {
+        const res = await withTimeout(doFetch(PRICE_URL), timeoutMs)
+        if (!res.ok) throw new Error('live source not ok')
+        const raw = (await res.json()) as RawPrices
+        const usd = raw?.USD
+        if (typeof usd !== 'number' || !isFinite(usd) || usd <= 0)
+          throw new Error('bad price')
+        return {
+          mode: 'live' as const,
+          dataDate: snapshotPrice().dataDate,
+          data: usd,
+        }
+      } catch {
+        return snapshotPrice()
       }
     },
   }

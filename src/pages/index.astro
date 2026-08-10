@@ -38,11 +38,32 @@ import Base from '../layouts/Base.astro'
   <p style="margin-top: 2.5rem; text-align: center">
     <a class="cta" href="/attack">Attack the Network</a>
   </p>
+
+  <!-- The vitals panel: key numbers about the network right now. Floats at the
+       right edge on wide screens, folds into the page flow on narrow ones. -->
+  <aside id="vitals" aria-label="Bitcoin network vitals">
+    <h2 class="v-title">Network vitals</h2>
+    <dl class="v-list">
+      <div class="v-row"><dt>Price</dt><dd id="v-price">—</dd></div>
+      <div class="v-row"><dt>Block height</dt><dd id="v-height">—</dd></div>
+      <div class="v-row"><dt>Hashrate</dt><dd id="v-hashrate">—</dd></div>
+      <div class="v-row"><dt>Nodes online</dt><dd id="v-nodes">—</dd></div>
+      <div class="v-row"><dt>Energy (est.)</dt><dd id="v-energy">—</dd></div>
+      <div class="v-row"><dt>Coins mined</dt><dd id="v-supply">—</dd></div>
+      <div class="v-row"><dt>Next halving</dt><dd id="v-halving">—</dd></div>
+    </dl>
+  </aside>
 </Base>
 
 <script>
   import { createDataTap, snapshotNodes, type BlockSummary } from '../tap/tap'
   import { createGlobe } from '../globe/globe'
+  import {
+    blocksToHalving,
+    daysToHalving,
+    estimatedGigawatts,
+    supplyAtHeight,
+  } from '../tap/derived'
 
   const tap = createDataTap()
 
@@ -98,6 +119,35 @@ import Base from '../layouts/Base.astro'
       result.mode === 'live' ? `${n} waiting` : `~${n} waiting (${result.dataDate})`
   }
 
+  // --- The vitals panel -----------------------------------------------------
+  // Price and hashrate come from the tap; nodes from the bundled snapshot
+  // (same CORS reason as the globe); energy, coins mined and the halving
+  // countdown are pure maths on top of numbers we already have.
+  const vEl = (id: string) => document.getElementById(id)!
+  const fmt = (n: number) => n.toLocaleString('en-GB')
+
+  function updateHeightVitals(height: number) {
+    vEl('v-height').textContent = `#${fmt(height)}`
+    const supply = supplyAtHeight(height)
+    vEl('v-supply').textContent = `${(supply / 1e6).toFixed(2)}M of 21M`
+    vEl('v-supply').title = `${fmt(Math.round(supply))} coins issued so far`
+    const days = Math.round(daysToHalving(height))
+    vEl('v-halving').textContent = `~${fmt(days)} days`
+    vEl('v-halving').title = `${fmt(blocksToHalving(height))} blocks until the reward halves`
+  }
+
+  async function refreshVitals() {
+    const [price, hashrate] = await Promise.all([tap.priceUSD(), tap.hashrateEH()])
+    const approx = (r: { mode: string }) => (r.mode === 'live' ? '' : '~')
+    vEl('v-price').textContent = `${approx(price)}$${fmt(Math.round(price.data))}`
+    vEl('v-hashrate').textContent = `${approx(hashrate)}${fmt(Math.round(hashrate.data))} EH/s`
+    vEl('v-energy').textContent = `~${Math.round(estimatedGigawatts(hashrate.data))} GW`
+    vEl('v-energy').title =
+      'Estimated: hashrate × typical miner efficiency. Nobody meters this directly.'
+    const nodes = snapshotNodes()
+    vEl('v-nodes').textContent = fmt(nodes.data.totalReachable)
+  }
+
   function render(blocks: BlockSummary[]) {
     blocksEl.innerHTML = ''
     for (const b of blocks.slice(0, SHOWN)) blocksEl.appendChild(tile(b))
@@ -109,6 +159,7 @@ import Base from '../layouts/Base.astro'
     const el = tile(block, true)
     blocksEl.prepend(el)
     while (blocksEl.children.length > SHOWN) blocksEl.lastElementChild!.remove()
+    updateHeightVitals(block.height)
   }
 
   function tickCountdown() {
@@ -137,6 +188,7 @@ import Base from '../layouts/Base.astro'
       // sit in the future, or the countdown would start beyond 10:00.
       newestTimestamp = Math.min(shown[0]?.timestamp ?? 0, Math.floor(Date.now() / 1000))
       render(shown)
+      if (shown[0]) updateHeightVitals(shown[0].height)
     } else if (result.data[0] && shown[0] && result.data[0].height > shown[0].height) {
       // Every block newer than what we're showing arrives, oldest-new first.
       const fresh = result.data
@@ -167,11 +219,13 @@ import Base from '../layouts/Base.astro'
 
   refresh(true)
   refreshMempool()
+  refreshVitals()
   setInterval(tickCountdown, 1000)
   setInterval(() => {
     if (!snapshotMode) {
       refresh()
       refreshMempool()
+      refreshVitals()
     }
   }, 30_000)
 </script>
@@ -287,6 +341,66 @@ import Base from '../layouts/Base.astro'
     align-items: center;
     gap: 0.5rem;
     white-space: nowrap;
+  }
+
+  /* ---- The vitals panel. Floats at the right edge on wide screens; the
+     media query below folds it into the page flow when there's no room. */
+  #vitals {
+    position: fixed;
+    right: 1.25rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 14rem;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 1rem 1.15rem 1.1rem;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: var(--glow);
+    z-index: 10;
+  }
+  .v-title {
+    margin: 0 0 0.6rem;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+  .v-list {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+  }
+  .v-row dt {
+    font-size: 1rem;
+    color: var(--dim);
+  }
+  .v-row dd {
+    margin: 0;
+    font-family: var(--mono);
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+  #v-price {
+    color: var(--orange);
+  }
+  /* No room to float: sit in the flow under the CTA as a wrapping grid. */
+  @media (max-width: 1480px) {
+    #vitals {
+      position: static;
+      transform: none;
+      width: auto;
+      margin-top: 2.5rem;
+    }
+    .v-list {
+      flex-direction: row;
+      flex-wrap: wrap;
+      gap: 1rem 2rem;
+    }
   }
 </style>
 

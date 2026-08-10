@@ -118,6 +118,37 @@ describe('data tap — mempool', () => {
   })
 })
 
+describe('data tap — price', () => {
+  it('passes the live dollar price through, flagged live', async () => {
+    const priceFetch: FetchLike = async () => ({
+      ok: true,
+      json: async () => ({ time: 1786352704, USD: 65173, EUR: 56383 }),
+    })
+    const tap = createDataTap(priceFetch)
+    const result = await tap.priceUSD()
+    expect(result.mode).toBe('live')
+    expect(result.data).toBe(65173)
+  })
+
+  it('falls back to the bundled price snapshot when live is down', async () => {
+    const tap = createDataTap(downFetch)
+    const result = await tap.priceUSD()
+    expect(result.mode).toBe('snapshot')
+    expect(result.data).toBeGreaterThan(0)
+    expect(result.dataDate).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+  })
+
+  it('rejects a garbage price and falls back', async () => {
+    const badFetch: FetchLike = async () => ({
+      ok: true,
+      json: async () => ({ USD: -1 }),
+    })
+    const tap = createDataTap(badFetch)
+    const result = await tap.priceUSD()
+    expect(result.mode).toBe('snapshot')
+  })
+})
+
 const liveNodes = {
   timestamp: 1790000000,
   total_nodes: 27000,
