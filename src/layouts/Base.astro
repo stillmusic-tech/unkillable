@@ -117,6 +117,13 @@ const current = Astro.url.pathname
     font-size: 1rem;
   }
   nav {
+    /* Pinned: the header stays put while the page scrolls under it. Its
+       translucent blur background was already in place, so content sliding
+       beneath reads as frosted glass. Above the vitals panel (z 10), below
+       the fundamentals popup (z 100). */
+    position: sticky;
+    top: 0;
+    z-index: 50;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
